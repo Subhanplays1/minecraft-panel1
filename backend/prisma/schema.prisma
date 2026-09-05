@@ -1,0 +1,644 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ============================================================
+// USERS & AUTH
+// ============================================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String?
+  name          String
+  firstName     String?
+  lastName      String?
+  role          String    @default("CUSTOMER")
+  avatar        String?
+  emailVerified Boolean   @default(false)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  banned        Boolean   @default(false)
+  banReason     String?
+  lastLoginAt   DateTime?
+  loginCount    Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions       Session[]
+  oauthAccounts  OAuthAccount[]
+  servers        Server[]
+  announcements  Announcement[]
+  announcementsViewed AnnouncementView[]
+  apiKeys        ApiKey[]
+  notifications  Notification[]
+  notificationPreferences NotificationPreference?
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  ipAddress    String?
+  userAgent    String?
+  lastActiveAt DateTime @default(now())
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model OAuthAccount {
+  id              String  @id @default(uuid())
+  userId          String
+  provider        String
+  providerUserId  String
+  accessToken     String?
+  refreshToken    String?
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  key       String   @unique
+  lastUsed  DateTime?
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([key])
+}
+
+// ============================================================
+// SETTINGS (Centralized Key-Value Store)
+// ============================================================
+
+model Setting {
+  id        String   @id @default(uuid())
+  group     String
+  key       String
+  value     String
+  type      String   @default("string")
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([group, key])
+  @@index([group])
+  @@index([key])
+}
+
+// ============================================================
+// BRANDING
+// ============================================================
+
+model BrandingSettings {
+  id             String   @id @default(uuid())
+  tenantId       String   @default("default")
+
+  // Basic Branding
+  panelName      String   @default("Minecraft Panel")
+  companyName    String   @default("")
+  shortName      String   @default("")
+  tagline        String   @default("")
+  description    String   @default("")
+  copyrightText  String   @default("")
+  supportName    String   @default("")
+  supportUrl     String   @default("")
+  websiteUrl     String   @default("")
+  statusPageUrl  String   @default("")
+  documentationUrl String @default("")
+
+  // Logos
+  mainLogo       String?
+  smallLogo      String?
+  favicon        String?
+  loginLogo      String?
+  emailLogo      String?
+
+  // Colors
+  primaryColor   String   @default("#7C3AED")
+  secondaryColor String   @default("#6D28D9")
+  accentColor    String   @default("#A855F7")
+  backgroundColor String  @default("#09090B")
+  sidebarColor   String   @default("#0A0A0C")
+  cardColor      String   @default("#18181B")
+  borderColor    String   @default("#27272A")
+  textColor      String   @default("#FAFAFA")
+  mutedTextColor String   @default("#A1A1AA")
+  successColor   String   @default("#22C55E")
+  warningColor   String   @default("#EAB308")
+  dangerColor    String   @default("#EF4444")
+  infoColor      String   @default("#3B82F6")
+
+  // Theme
+  defaultTheme   String   @default("dark")
+  allowUserThemeSwitch Boolean @default(true)
+
+  // Background
+  bgType         String   @default("solid")
+  bgColor1       String   @default("#09090B")
+  bgColor2       String   @default("#18181B")
+  bgDirection    String   @default("to bottom right")
+  bgImage        String?
+  bgOpacity      Float    @default(1.0)
+  bgBlur         Float    @default(0)
+  bgPosition     String   @default("center")
+  bgSize         String   @default("cover")
+  bgRepeat       String   @default("no-repeat")
+  bgOverlay      Boolean  @default(false)
+  bgVideo        String?
+
+  // Fonts
+  fontProvider   String   @default("system")
+  headingFont    String   @default("Inter")
+  bodyFont       String   @default("Inter")
+  codeFont       String   @default("JetBrains Mono")
+  customFontUrl  String?
+  customFontName String?
+
+  // White Label
+  whiteLabelMode Boolean  @default(false)
+  hidePlatformBranding Boolean @default(false)
+  hideDeveloperCredits Boolean @default(false)
+  customProductName String?
+  customSupportUrl  String?
+  customDocsUrl     String?
+
+  // Custom CSS/JS
+  customCss      String?
+  customJs       String?
+  customJsEnabled Boolean @default(false)
+
+  // Maintenance
+  maintenanceEnabled Boolean @default(false)
+  maintenanceTitle String  @default("We're currently performing maintenance.")
+  maintenanceDescription String @default("We'll be back shortly.")
+  maintenanceLogo  String?
+  maintenanceBg    String?
+  maintenanceCountdown Boolean @default(false)
+  maintenanceStatusUrl String?
+  maintenanceBypassIps String @default("[]")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([tenantId])
+}
+
+// ============================================================
+// AUTH PAGE BRANDING
+// ============================================================
+
+model AuthBranding {
+  id               String   @id @default(uuid())
+  tenantId         String   @default("default")
+
+  // Login Page
+  loginTitle       String   @default("Welcome back!")
+  loginDescription String   @default("Sign in to manage your servers.")
+  loginLogo        String?
+  loginBgType      String   @default("solid")
+  loginBgColor     String   @default("#09090B")
+  loginBgImage     String?
+  loginBgGradient  String?
+  loginButtonText  String   @default("Sign In")
+  loginFooterText  String   @default("")
+  loginSupportLink String?
+  loginTermsLink   String?
+  loginPrivacyLink String?
+
+  // Register Page
+  registerEnabled      Boolean  @default(true)
+  registerTitle        String   @default("Create an account")
+  registerDescription  String   @default("Get started with your server.")
+  registerLogo         String?
+  registerBgType       String   @default("solid")
+  registerBgColor      String   @default("#09090B")
+  registerBgImage      String?
+  registerBgGradient   String?
+  registerTermsText    String   @default("Terms of Service")
+  registerPrivacyText  String   @default("Privacy Policy")
+  registerButtonText   String   @default("Create Account")
+  registerSuccessMessage String @default("Account created! Please check your email.")
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([tenantId])
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+
+model NavigationItem {
+  id           String   @id @default(uuid())
+  tenantId     String   @default("default")
+  name         String
+  icon         String?
+  url          String
+  permission   String?
+  openNewTab   Boolean  @default(false)
+  section      String   @default("main")
+  sortOrder    Int      @default(0)
+  isVisible    Boolean  @default(true)
+  isCustom     Boolean  @default(false)
+  parentItem   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId, sortOrder])
+}
+
+// ============================================================
+// DASHBOARD WIDGETS
+// ============================================================
+
+model DashboardWidget {
+  id           String   @id @default(uuid())
+  tenantId     String   @default("default")
+  widgetType   String
+  label        String
+  isVisible    Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  role         String   @default("CUSTOMER")
+  config       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId, role, sortOrder])
+}
+
+// ============================================================
+// ERROR PAGES
+// ============================================================
+
+model ErrorPage {
+  id           String   @id @default(uuid())
+  tenantId     String   @default("default")
+  statusCode   Int
+  title        String
+  description  String
+  image        String?
+  logo         String?
+  buttonText   String   @default("Go Home")
+  buttonUrl    String   @default("/")
+  background   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, statusCode])
+}
+
+// ============================================================
+// SOCIAL LINKS
+// ============================================================
+
+model SocialLink {
+  id         String   @id @default(uuid())
+  tenantId   String   @default("default")
+  platform   String
+  url        String
+  icon       String?
+  isVisible  Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  locations  String   @default("[\"footer\"]")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId, sortOrder])
+}
+
+// ============================================================
+// ANNOUNCEMENTS
+// ============================================================
+
+model Announcement {
+  id           String   @id @default(uuid())
+  tenantId     String   @default("default")
+  title        String
+  content      String
+  type         String   @default("INFO")
+  locations    String   @default("[\"dashboard\"]")
+  isVisible    Boolean  @default(true)
+  isDismissible Boolean @default(true)
+  startDate    DateTime?
+  endDate      DateTime?
+  authorId     String?
+  roles        String   @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  author   User?  @relation(fields: [authorId], references: [id])
+  views    AnnouncementView[]
+
+  @@index([tenantId, isVisible])
+}
+
+model AnnouncementView {
+  id             String   @id @default(uuid())
+  announcementId String
+  userId         String
+  dismissedAt    DateTime @default(now())
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+}
+
+// ============================================================
+// FEATURE FLAGS
+// ============================================================
+
+model FeatureFlag {
+  id          String   @id @default(uuid())
+  tenantId    String   @default("default")
+  key         String
+  name        String
+  description String?
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, key])
+}
+
+// ============================================================
+// EMAIL TEMPLATES
+// ============================================================
+
+model EmailTemplate {
+  id           String   @id @default(uuid())
+  tenantId     String   @default("default")
+  key          String
+  name         String
+  subject      String
+  htmlBody     String
+  textBody     String?
+  variables    String   @default("[]")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, key])
+}
+
+model EmailSettings {
+  id           String   @id @default(uuid())
+  tenantId     String   @default("default")
+  senderName   String   @default("Minecraft Panel")
+  senderEmail  String   @default("noreply@example.com")
+  replyTo      String?
+  logo         String?
+  headerText   String?
+  footerText   String?
+  headerColor  String   @default("#7C3AED")
+  footerBgColor String  @default("#18181B")
+  companyName  String?
+  supportUrl   String?
+  documentationUrl String?
+  socialLinks  String?
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUser     String?
+  smtpPass     String?
+  smtpSecure   Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId])
+}
+
+// ============================================================
+// OAUTH PROVIDERS
+// ============================================================
+
+model OAuthProvider {
+  id           String   @id @default(uuid())
+  tenantId     String   @default("default")
+  name         String
+  displayName  String
+  isEnabled    Boolean  @default(false)
+  clientId     String?
+  clientSecret String?
+  callbackUrl  String?
+  scopes       String   @default("[]")
+  icon         String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, name])
+}
+
+// ============================================================
+// NODES
+// ============================================================
+
+model Node {
+  id          String   @id @default(uuid())
+  name        String
+  displayName String
+  description String?
+  hostname    String   @default("127.0.0.1")
+  port        Int      @default(8080)
+  scheme      String   @default("http")
+  token       String?
+  location    String   @default("Local")
+  isOnline    Boolean  @default(true)
+  isVisible   Boolean  @default(true)
+  maxServers  Int      @default(50)
+  allocatedRam Int     @default(0)
+  allocatedDisk Int    @default(0)
+  totalRam    Int      @default(32768)
+  totalDisk   Int      @default(512000)
+  cpuUsage    Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  servers Server[]
+
+  @@index([isOnline])
+}
+
+// ============================================================
+// SERVERS
+// ============================================================
+
+model Server {
+  id          String    @id @default(uuid())
+  name        String
+  userId      String
+  nodeId      String?
+  status      String    @default("STOPPED")
+  software    String    @default("paper")
+  mcVersion   String    @default("1.21.4")
+  javaVersion String    @default("21")
+  ram         Int       @default(1024)
+  cpu         Int       @default(100)
+  disk        Int       @default(10240)
+  port        Int       @default(25565)
+  ip          String?
+  sftpUser    String?
+  planId      String?
+  startupCmd  String?
+  autoStart   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  node Node?   @relation(fields: [nodeId], references: [id], onDelete: SetNull)
+  backups Backup[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([nodeId])
+}
+
+// ============================================================
+// BACKUPS
+// ============================================================
+
+model Backup {
+  id        String   @id @default(uuid())
+  serverId  String
+  name      String
+  size      Int      @default(0)
+  status    String   @default("COMPLETED")
+  createdAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String    @default("INFO")
+  read      Boolean   @default(false)
+  actionUrl String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
+
+model NotificationPreference {
+  id              String  @id @default(uuid())
+  userId          String  @unique
+  emailOnServerEvent Boolean @default(true)
+  emailOnBilling    Boolean @default(true)
+  emailOnSecurity   Boolean @default(true)
+  browserEnabled    Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// CUSTOM FOOTER
+// ============================================================
+
+model FooterSettings {
+  id           String   @id @default(uuid())
+  tenantId     String   @default("default")
+  copyright    String   @default("")
+  sections     String   @default("[]")
+  isVisible    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId])
+}
+
+// ============================================================
+// CUSTOM STATUS PAGE
+// ============================================================
+
+model StatusPage {
+  id           String   @id @default(uuid())
+  tenantId     String   @default("default")
+  isExternal   Boolean  @default(false)
+  externalUrl  String?
+  services     String   @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId])
+}
+
+// ============================================================
+// TRANSLATIONS (i18n)
+// ============================================================
+
+model Language {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  nativeName   String
+  isEnabled    Boolean  @default(false)
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  translations Translation[]
+}
+
+model Translation {
+  id         String @id @default(uuid())
+  languageId String
+  key        String
+  value      String
+
+  language Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@unique([languageId, key])
+  @@index([languageId])
+  @@index([key])
+}
+
+// ============================================================
+// BRAND PRESETS
+// ============================================================
+
+model BrandPreset {
+  id          String   @id @default(uuid())
+  tenantId    String   @default("default")
+  name        String
+  data        String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+}
