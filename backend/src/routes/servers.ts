@@ -516,59 +516,80 @@ router.get("/versions/:software", authenticate, async (req: Request, res: Respon
       return 0;
     };
 
-    switch (software) {
-      case "PAPER":
-      case "SPIGOT":
-      case "BUKKIT": {
-        const data = await fetchJson("https://fill.papermc.io/v3/projects/paper");
-        const groups: Record<string, string[]> = data.versions || {};
-        versions = Object.values(groups).flat()
-          .filter((v) => !v.includes("-rc") && !v.includes("-pre") && !v.includes("-alpha") && !v.includes("-beta"))
-          .sort(semverSort)
-          .reverse();
-        break;
+    const FALLBACK: Record<string, string[]> = {
+      PAPER: ["26.2", "26.1.2", "1.21.4", "1.21.3", "1.21.1", "1.20.6", "1.20.4", "1.20.2", "1.20.1", "1.19.4", "1.19.3", "1.19.2", "1.18.2", "1.17.1", "1.16.5", "1.12.2"],
+      SPIGOT: ["26.2", "26.1.2", "1.21.4", "1.21.3", "1.21.1", "1.20.6", "1.20.4", "1.20.2", "1.19.4", "1.19.2", "1.18.2", "1.17.1", "1.16.5", "1.12.2"],
+      PURPUR: ["26.2", "26.1.2", "1.21.4", "1.21.3", "1.21.1", "1.20.6", "1.20.4", "1.20.2", "1.19.4", "1.19.2", "1.18.2", "1.16.5"],
+      VELOCITY: ["4.1.2", "4.1.1", "4.1.0", "4.0.0", "3.4.0", "3.3.0", "3.2.1"],
+      WATERFALL: ["1.21", "1.20.6", "1.20.4", "1.20.2", "1.19.4", "1.19.2", "1.18.2"],
+      BUNGEECORD: ["1.21", "1.20.6", "1.20.4", "1.20.2", "1.19.4", "1.19.2", "1.18.2"],
+      FABRIC: ["26.2", "26.1.2", "1.21.4", "1.21.3", "1.21.1", "1.20.6", "1.20.4", "1.20.2", "1.19.4", "1.19.2", "1.18.2", "1.17.1", "1.16.5"],
+      FORGE: ["26.2", "26.1.2", "1.21.4", "1.21.3", "1.21.1", "1.20.6", "1.20.4", "1.20.2", "1.19.4", "1.19.2", "1.18.2", "1.17.1", "1.16.5"],
+      NEOFORGE: ["26.2", "26.1.2", "1.21.4", "1.21.3", "1.21.1"],
+      QUILT: ["26.2", "26.1.2", "1.21.4", "1.21.3", "1.21.1", "1.20.6", "1.20.4"],
+    };
+
+    try {
+      switch (software) {
+        case "PAPER":
+        case "SPIGOT":
+        case "BUKKIT": {
+          const data = await fetchJson("https://fill.papermc.io/v3/projects/paper");
+          const groups: Record<string, string[]> = data.versions || {};
+          versions = Object.values(groups).flat()
+            .filter((v) => !v.includes("-rc") && !v.includes("-pre") && !v.includes("-alpha") && !v.includes("-beta"))
+            .sort(semverSort)
+            .reverse();
+          break;
+        }
+        case "PURPUR": {
+          const data = await fetchJson("https://api.purpurmc.org/v2/purpur");
+          versions = (data.versions || []).sort(semverSort).reverse();
+          break;
+        }
+        case "VELOCITY": {
+          const data = await fetchJson("https://fill.papermc.io/v3/projects/velocity");
+          const groups: Record<string, string[]> = data.versions || {};
+          versions = Object.values(groups).flat()
+            .filter((v) => !v.includes("-rc") && !v.includes("-pre") && !v.includes("-alpha") && !v.includes("-beta"))
+            .sort(semverSort)
+            .reverse();
+          break;
+        }
+        case "WATERFALL":
+        case "BUNGEECORD": {
+          const data = await fetchJson("https://fill.papermc.io/v3/projects/waterfall");
+          const groups: Record<string, string[]> = data.versions || {};
+          versions = Object.values(groups).flat()
+            .filter((v) => !v.includes("-rc") && !v.includes("-pre") && !v.includes("-alpha") && !v.includes("-beta"))
+            .sort(semverSort)
+            .reverse();
+          break;
+        }
+        case "FABRIC": {
+          const data = await fetchJson("https://meta.fabricmc.net/v2/versions/game");
+          versions = data.filter((v: any) => v.stable).map((v: any) => v.version).sort(semverSort).reverse();
+          if (versions.length === 0) versions = data.map((v: any) => v.version).sort(semverSort).reverse();
+          break;
+        }
+        case "FORGE":
+        case "NEOFORGE":
+        case "QUILT": {
+          const data = await fetchJson("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json");
+          const promos = data.promos || {};
+          versions = Object.keys(promos).filter((k) => k.includes("recommended")).sort(semverSort).reverse();
+          if (versions.length === 0) versions = Object.keys(promos).sort(semverSort).reverse();
+          break;
+        }
+        default:
+          versions = ["latest"];
       }
-      case "PURPUR": {
-        const data = await fetchJson("https://api.purpurmc.org/v2/purpur");
-        versions = (data.versions || []).sort(semverSort).reverse();
-        break;
-      }
-      case "VELOCITY": {
-        const data = await fetchJson("https://fill.papermc.io/v3/projects/velocity");
-        const groups: Record<string, string[]> = data.versions || {};
-        versions = Object.values(groups).flat()
-          .filter((v) => !v.includes("-rc") && !v.includes("-pre") && !v.includes("-alpha") && !v.includes("-beta"))
-          .sort(semverSort)
-          .reverse();
-        break;
-      }
-      case "WATERFALL":
-      case "BUNGEECORD": {
-        const data = await fetchJson("https://fill.papermc.io/v3/projects/waterfall");
-        const groups: Record<string, string[]> = data.versions || {};
-        versions = Object.values(groups).flat()
-          .filter((v) => !v.includes("-rc") && !v.includes("-pre") && !v.includes("-alpha") && !v.includes("-beta"))
-          .sort(semverSort)
-          .reverse();
-        break;
-      }
-      case "FABRIC": {
-        const data = await fetchJson("https://meta.fabricmc.net/v2/versions/game");
-        versions = data.filter((v: any) => v.stable).map((v: any) => v.version).sort(semverSort).reverse();
-        if (versions.length === 0) versions = data.map((v: any) => v.version).sort(semverSort).reverse();
-        break;
-      }
-      case "FORGE":
-      case "NEOFORGE":
-      case "QUILT": {
-        const data = await fetchJson("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json");
-        const promos = data.promos || {};
-        versions = Object.keys(promos).filter((k) => k.includes("recommended")).sort(semverSort).reverse();
-        if (versions.length === 0) versions = Object.keys(promos).sort(semverSort).reverse();
-        break;
-      }
-      default:
-        versions = ["latest"];
+    } catch (apiErr) {
+      console.warn(`[Versions] API failed for ${software}, using fallback`);
+    }
+
+    if (versions.length === 0) {
+      versions = FALLBACK[software] || FALLBACK["PAPER"];
     }
 
     return res.json({ software, versions: ["latest", ...versions.filter((v) => v !== "latest")] });
