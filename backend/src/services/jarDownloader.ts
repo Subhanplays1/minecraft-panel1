@@ -23,14 +23,14 @@ function fetchJson(url: string): Promise<any> {
   });
 }
 
-function downloadFile(url: string, dest: string): Promise<void> {
+function downloadFile(url: string, dest: string, retries = 3): Promise<void> {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith("https") ? https : http;
-    const doDownload = (dlUrl: string, redirects = 0) => {
+    const doDownload = (dlUrl: string, redirects = 0, attempt = 0) => {
       if (redirects > 5) return reject(new Error("Too many redirects"));
       const req = mod.get(dlUrl, { headers: { "User-Agent": "MinecraftPanel/1.0" } }, (res) => {
         if (res.statusCode === 301 || res.statusCode === 302) {
-          return doDownload(res.headers.location!, redirects + 1);
+          return doDownload(res.headers.location!, redirects + 1, attempt);
         }
         if (res.statusCode !== 200) {
           return reject(new Error(`HTTP ${res.statusCode} downloading ${dlUrl}`));
@@ -40,7 +40,13 @@ function downloadFile(url: string, dest: string): Promise<void> {
         file.on("finish", () => { file.close(); resolve(); });
         file.on("error", (err) => { try { fs.unlinkSync(dest); } catch {} reject(err); });
       });
-      req.on("error", reject);
+      req.on("error", (err) => {
+        if (attempt < retries - 1) {
+          console.log(`[JarDownloader] Download attempt ${attempt + 1} failed, retrying...`);
+          return doDownload(dlUrl, 0, attempt + 1);
+        }
+        reject(err);
+      });
       req.setTimeout(120000, () => { req.destroy(); reject(new Error("Download timeout")); });
     };
     doDownload(url);
@@ -53,9 +59,10 @@ function downloadFile(url: string, dest: string): Promise<void> {
 async function getPaperJar(version: string): Promise<{ url: string; filename: string }> {
   if (version === "latest") {
     const data = await fetchJson("https://fill.papermc.io/v3/projects/paper");
-    // v3: .versions is an object of groups -> each group has an array of versions
     const groups: Record<string, string[]> = data.versions || {};
-    const allVersions = Object.values(groups).flat().sort();
+    const allVersions = Object.values(groups).flat()
+      .filter((v) => !v.includes("-rc") && !v.includes("-pre") && !v.includes("-alpha") && !v.includes("-beta") && !v.includes("-snapshot"))
+      .sort();
     version = allVersions[allVersions.length - 1] || "1.21.4";
     console.log(`[JarDownloader] Paper latest resolved to ${version}`);
   }
@@ -106,7 +113,9 @@ async function getVelocityJar(version: string): Promise<{ url: string; filename:
   if (version === "latest") {
     const data = await fetchJson("https://fill.papermc.io/v3/projects/velocity");
     const groups: Record<string, string[]> = data.versions || {};
-    const allVersions = Object.values(groups).flat().sort();
+    const allVersions = Object.values(groups).flat()
+      .filter((v) => !v.includes("-rc") && !v.includes("-pre") && !v.includes("-alpha") && !v.includes("-beta") && !v.includes("-snapshot"))
+      .sort();
     version = allVersions[allVersions.length - 1] || "3.3.0";
   }
 
@@ -134,7 +143,9 @@ async function getVelocityJar(version: string): Promise<{ url: string; filename:
 async function getBungeeCordJar(): Promise<{ url: string; filename: string }> {
   const data = await fetchJson("https://fill.papermc.io/v3/projects/waterfall");
   const groups: Record<string, string[]> = data.versions || {};
-  const allVersions = Object.values(groups).flat().sort();
+  const allVersions = Object.values(groups).flat()
+    .filter((v) => !v.includes("-rc") && !v.includes("-pre") && !v.includes("-alpha") && !v.includes("-beta") && !v.includes("-snapshot"))
+    .sort();
   const version = allVersions[allVersions.length - 1] || "1.21";
 
   const buildsData = await fetchJson(`https://fill.papermc.io/v3/projects/waterfall/versions/${version}/builds`);
