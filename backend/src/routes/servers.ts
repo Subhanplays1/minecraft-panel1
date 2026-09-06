@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import https from "https";
 import http from "http";
+import { exec, spawn, ChildProcess } from "child_process";
 import {
   createLocalServer, startLocalServer, stopLocalServer,
   killLocalServer, sendLocalCommand, isRunning, getStartedAt,
@@ -12,6 +13,9 @@ import {
 } from "../services/processManager";
 
 const router = Router();
+
+// Track playit processes in memory
+const playitProcesses: Map<string, ChildProcess> = new Map();
 
 function param(req: Request, name: string): string {
   const val = req.params[name];
@@ -610,6 +614,143 @@ router.delete("/:id/users/:userId", authenticate, async (req: Request, res: Resp
   } catch (error) {
     console.error("Remove server user error:", error);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// PLAYIT TUNNEL
+// ============================================================
+
+const PLAYIT_VERSION = "v0.15.26";
+
+router.get("/:id/playit", authenticate, async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+
+    const serverDir = getServerPath(server.id);
+    const secretPath = path.join(serverDir, "playit.toml");
+    const hasSecret = fs.existsSync(secretPath);
+
+    if (playitProcesses.has(server.id)) {
+      const proc = playitProcesses.get(server.id)!;
+      if (!proc.killed && proc.pid) {
+        let logs = "";
+        const logFile = path.join(serverDir, "playit.log");
+        if (fs.existsSync(logFile)) {
+          const content = fs.readFileSync(logFile, "utf-8");
+          logs = content.split("\n").slice(-80).join("\n");
+        }
+        const claimMatch = logs.match(/https:\/\/playit\.gg\/claim\/[a-zA-Z0-9]+/g);
+        return res.json({
+          status: "running",
+          claimLink: claimMatch ? claimMatch[claimMatch.length - 1] : null,
+          logs,
+          pid: proc.pid,
+        });
+      } else {
+        playitProcesses.delete(server.id);
+      }
+    }
+
+    return res.json({ status: "stopped", claimLink: null, logs: "", hasSecret });
+  } catch (error) {
+    console.error("Get playit status error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:id/playit/start", authenticate, async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+
+    if (playitProcesses.has(server.id)) {
+      return res.json({ success: true, message: "Already running" });
+    }
+
+    const serverDir = getServerPath(server.id);
+    if (!fs.existsSync(serverDir)) fs.mkdirSync(serverDir, { recursive: true });
+
+    const playitBin = path.join(serverDir, "playit");
+    const secretPath = path.join(serverDir, "playit.toml");
+    const logFile = path.join(serverDir, "playit.log");
+
+    if (!fs.existsSync(playitBin)) {
+      await new Promise<void>((resolve, reject) => {
+        const url = `https://github.com/playit-cloud/playit-agent/releases/download/${PLAYIT_VERSION}/playit-linux-amd64`;
+        exec(`wget -qO "${playitBin}" "${url}" && chmod +x "${playitBin}"`, (err) => {
+          if (err) reject(err); else resolve();
+        });
+      });
+    }
+
+    const logStream = fs.createWriteStream(logFile, { flags: "a" });
+
+    const proc = spawn(playitBin, ["-s", "--secret_path", secretPath], {
+      detached: true,
+      stdio: ["ignore", logStream, logStream],
+      cwd: serverDir,
+    });
+
+    proc.on("error", (err) => {
+      console.error(`Playit process error for server ${server.id}:`, err.message);
+      playitProcesses.delete(server.id);
+    });
+
+    proc.on("exit", () => {
+      playitProcesses.delete(server.id);
+    });
+
+    proc.unref();
+    playitProcesses.set(server.id, proc);
+
+    return res.json({ success: true, pid: proc.pid });
+  } catch (error) {
+    console.error("Start playit error:", error);
+    return res.status(500).json({ error: "Failed to start playit tunnel" });
+  }
+});
+
+router.post("/:id/playit/stop", authenticate, async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+
+    const proc = playitProcesses.get(server.id);
+    if (proc && !proc.killed && proc.pid) {
+      process.kill(-proc.pid, "SIGTERM");
+      playitProcesses.delete(server.id);
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Stop playit error:", error);
+    return res.status(500).json({ error: "Failed to stop playit tunnel" });
+  }
+});
+
+router.post("/:id/playit/reset", authenticate, async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+
+    const proc = playitProcesses.get(server.id);
+    if (proc && !proc.killed && proc.pid) {
+      process.kill(-proc.pid, "SIGTERM");
+      playitProcesses.delete(server.id);
+    }
+
+    const serverDir = getServerPath(server.id);
+    const secretPath = path.join(serverDir, "playit.toml");
+    const logFile = path.join(serverDir, "playit.log");
+    if (fs.existsSync(secretPath)) fs.unlinkSync(secretPath);
+    if (fs.existsSync(logFile)) fs.unlinkSync(logFile);
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Reset playit error:", error);
+    return res.status(500).json({ error: "Failed to reset playit tunnel" });
   }
 });
 
