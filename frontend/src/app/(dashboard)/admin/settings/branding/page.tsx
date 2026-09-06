@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { branding as brandingApi, type BrandingSettings } from "@/lib/api";
+import { useBranding } from "@/components/BrandingProvider";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
@@ -23,6 +24,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 export default function BrandingPage() {
   const router = useRouter();
+  const { refresh: refreshBranding } = useBranding();
   const [branding, setBranding] = useState<BrandingSettings>({} as BrandingSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,6 +69,7 @@ export default function BrandingPage() {
       await brandingApi.update(branding, token);
       toast.success("Branding saved!");
       applyLiveTheme();
+      refreshBranding();
     } catch (error) {
       toast.error("Failed to save");
     } finally {
@@ -104,6 +107,7 @@ export default function BrandingPage() {
       }
       setBranding((prev) => ({ ...prev, [field]: result.logo || result.bgImage }));
       toast.success("Uploaded!");
+      refreshBranding();
     } catch {
       toast.error("Upload failed");
     }
@@ -115,6 +119,7 @@ export default function BrandingPage() {
       await brandingApi.removeAsset(field, token);
       setBranding((prev) => ({ ...prev, [field]: null }));
       toast.success("Removed");
+      refreshBranding();
     } catch {
       toast.error("Remove failed");
     }
