@@ -36,13 +36,22 @@ router.get("/", authenticate, authorize("ADMIN"), async (_req: Request, res: Res
 });
 
 // PUT /api/branding - Update branding (admin only)
-router.put("/", authenticate, authorize("ADMIN"), validate(brandingUpdateSchema), async (req: Request, res: Response) => {
+router.put("/", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
   try {
-    const updated = await settings.updateBranding(req.body);
+    const { id, tenantId, createdAt, updatedAt, ...raw } = req.body;
+    const data: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      if (key === "maintenanceBypassIps") {
+        if (Array.isArray(value)) data[key] = value;
+      } else {
+        data[key] = value;
+      }
+    }
+    const updated = await settings.updateBranding(data);
     return res.json(updated);
-  } catch (error) {
-    console.error("Update branding error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+  } catch (error: any) {
+    console.error("Update branding error:", error.message || error);
+    return res.status(500).json({ error: error.message || "Internal server error" });
   }
 });
 
