@@ -10,24 +10,28 @@ const logStreams = new Map<string, fs.WriteStream>();
 
 export function resolveJavaBinary(): string | null {
   const candidates = [
-    "java",
-    "/usr/bin/java",
-    "/usr/local/bin/java",
-    "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
-    "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+    "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.12.101-hotspot\\bin\\java.exe",
+    "C:\\Program Files\\Eclipse Adoptium\\jdk-25.0.4.1-hotspot\\bin\\java.exe",
     "C:\\Program Files\\Java\\jdk-21\\bin\\java.exe",
     "C:\\Program Files\\Java\\jdk-17\\bin\\java.exe",
-    "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.4.7-hotspot\\bin\\java.exe",
+    "/usr/bin/java",
+    "/usr/local/bin/java",
+    "/usr/lib/jvm/java-25-openjdk-amd64/bin/java",
+    "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+    "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+    "java",
   ];
   for (const cand of candidates) {
-    if (cand === "java") {
-      try {
-        execSync("java -version", { stdio: "pipe" });
-        return "java";
-      } catch {}
-    } else if (fs.existsSync(cand)) {
-      return cand;
-    }
+    try {
+      if (cand === "java") {
+        const output = execSync("java -version", { stdio: "pipe" }).toString() + execSync("java -version 2>&1", { stdio: "pipe" }).toString();
+        if (output.includes("25.") || output.includes("24.") || output.includes("23.") || output.includes("22.") || output.includes("21.")) {
+          return "java";
+        }
+      } else if (fs.existsSync(cand)) {
+        return cand;
+      }
+    } catch {}
   }
   return null;
 }
