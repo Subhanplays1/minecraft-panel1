@@ -6,7 +6,9 @@ import type { PublicSettings } from "@/lib/api";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, Server, ShoppingBag, FolderOpen, Puzzle, Archive,
-  Users, Network, Settings, LogOut, ChevronLeft, ChevronRight, Bell, Search
+  Users, Network, Settings, LogOut, ChevronLeft, ChevronRight, Bell, Search,
+  Terminal, Play, Square, RotateCcw, HardDrive, ArrowLeft, ExternalLink,
+  Cpu, Shield, Globe
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -21,12 +23,25 @@ const iconMap: Record<string, React.ReactNode> = {
   Settings: <Settings size={20} />,
 };
 
+interface ServerInfo {
+  id: string;
+  name: string;
+  status: string;
+  software: string;
+  mcVersion: string;
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { settings } = useBranding();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null);
+
+  // Server context
+  const serverMatch = pathname.match(/^\/servers\/([a-f0-9-]+)/);
+  const serverId = serverMatch ? serverMatch[1] : null;
+  const [currentServer, setCurrentServer] = useState<ServerInfo | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -36,6 +51,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     setUser(JSON.parse(stored));
   }, [router]);
+
+  useEffect(() => {
+    if (!serverId) { setCurrentServer(null); return; }
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`/api/servers/${serverId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((data) => { if (data && !data.error) setCurrentServer(data); })
+      .catch(() => {});
+  }, [serverId]);
 
   if (!user || !settings) {
     return (
@@ -56,6 +81,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
 
+  const serverNavItems = [
+    { id: "console", name: "Console", icon: <Terminal size={20} />, url: `/servers/${serverId}` },
+    { id: "files", name: "Files", icon: <FolderOpen size={20} />, url: `/servers/${serverId}/files` },
+    { id: "plugins", name: "Plugins", icon: <Puzzle size={20} />, url: `/servers/${serverId}/plugins` },
+    { id: "backups", name: "Backups", icon: <Archive size={20} />, url: `/servers/${serverId}/backups` },
+    { id: "settings", name: "Settings", icon: <Settings size={20} />, url: `/servers/${serverId}/settings` },
+  ];
+
+  const statusColor = (s: string) => {
+    if (s === "RUNNING") return "#22c55e";
+    if (s === "STOPPED") return "#ef4444";
+    if (s === "STARTING") return "#eab308";
+    return "#6b7280";
+  };
+
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: "var(--brand-background)" }}>
       {/* Sidebar */}
@@ -67,64 +107,95 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           borderRight: "1px solid var(--brand-border)",
         }}
       >
-        {/* Logo */}
+        {/* Logo / Server Header */}
         <div className="h-16 flex items-center px-4 gap-3" style={{ borderBottom: "1px solid var(--brand-border)" }}>
-          {settings.branding.mainLogo ? (
-            <img
-              src={`/${sidebarCollapsed ? settings.branding.smallLogo || settings.branding.mainLogo : settings.branding.mainLogo}`}
-              alt="Logo"
-              className="h-8 object-contain"
-            />
+          {serverId && currentServer && !sidebarCollapsed ? (
+            <>
+              <button onClick={() => router.push("/servers")} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" style={{ color: "var(--brand-primary)" }}>
+                <ArrowLeft size={18} />
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold truncate" style={{ color: "var(--brand-text)" }}>{currentServer.name}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor(currentServer.status) }} />
+                  <span className="text-xs" style={{ color: "var(--brand-muted)" }}>{currentServer.status}</span>
+                </div>
+              </div>
+            </>
+          ) : serverId && currentServer && sidebarCollapsed ? (
+            <button onClick={() => router.push("/servers")} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10" style={{ color: "var(--brand-primary)" }}>
+              <ArrowLeft size={18} />
+            </button>
           ) : (
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 animate-glow"
-              style={{ backgroundColor: "var(--brand-primary)", color: "white" }}
-            >
-              {(settings.branding.shortName || settings.branding.panelName || "MC")[0]}
-            </div>
-          )}
-          {!sidebarCollapsed && (
-            <span className="text-sm font-semibold truncate" style={{ color: "var(--brand-text)" }}>
-              {settings.branding.shortName || settings.branding.panelName}
-            </span>
+            <>
+              {settings.branding.mainLogo ? (
+                <img
+                  src={`/${sidebarCollapsed ? settings.branding.smallLogo || settings.branding.mainLogo : settings.branding.mainLogo}`}
+                  alt="Logo"
+                  className="h-8 object-contain"
+                />
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 animate-glow"
+                  style={{ backgroundColor: "var(--brand-primary)", color: "white" }}
+                >
+                  {(settings.branding.shortName || settings.branding.panelName || "MC")[0]}
+                </div>
+              )}
+              {!sidebarCollapsed && (
+                <span className="text-sm font-semibold truncate" style={{ color: "var(--brand-text)" }}>
+                  {settings.branding.shortName || settings.branding.panelName}
+                </span>
+              )}
+            </>
           )}
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-2">
-          <div className="space-y-1">
-            {mainNav.map((item) => {
-              const active = isActive(item.url);
-              return (
-                <a
-                  key={item.id}
-                  href={item.url}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all sidebar-item"
-                  style={{
-                    backgroundColor: active ? "var(--brand-primary)" + "15" : "transparent",
-                    color: active ? "var(--brand-primary)" : "var(--brand-muted)",
-                    borderRight: active ? "3px solid var(--brand-primary)" : "3px solid transparent",
-                  }}
-                  target={item.openNewTab ? "_blank" : undefined}
-                  rel={item.openNewTab ? "noopener noreferrer" : undefined}
-                >
-                  {item.icon && iconMap[item.icon]}
-                  {!sidebarCollapsed && <span>{item.name}</span>}
-                </a>
-              );
-            })}
-          </div>
-
-          {adminNav.length > 0 && (
-            <div className="mt-6">
-              <div
-                className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider"
-                style={{ color: "var(--brand-muted)", opacity: 0.5 }}
-              >
-                {sidebarCollapsed ? "—" : "Admin"}
+          {serverId && currentServer ? (
+            /* Server-specific navigation */
+            <div className="space-y-1">
+              <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-muted)", opacity: 0.5 }}>
+                {sidebarCollapsed ? "—" : "Server Management"}
               </div>
+              {serverNavItems.map((item) => {
+                const active = isActive(item.url);
+                return (
+                  <a
+                    key={item.id}
+                    href={item.url}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all sidebar-item"
+                    style={{
+                      backgroundColor: active ? "var(--brand-primary)" + "15" : "transparent",
+                      color: active ? "var(--brand-primary)" : "var(--brand-muted)",
+                      borderRight: active ? "3px solid var(--brand-primary)" : "3px solid transparent",
+                    }}
+                  >
+                    {item.icon}
+                    {!sidebarCollapsed && <span>{item.name}</span>}
+                  </a>
+                );
+              })}
+
+              {!sidebarCollapsed && (
+                <div className="mt-4 px-3 py-3 rounded-lg" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
+                  <div className="text-xs font-medium mb-1" style={{ color: "var(--brand-muted)" }}>Server Info</div>
+                  <div className="text-xs space-y-1" style={{ color: "var(--brand-muted)" }}>
+                    <div>{currentServer.software} {currentServer.mcVersion}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor(currentServer.status) }} />
+                      {currentServer.status}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Normal navigation */
+            <>
               <div className="space-y-1">
-                {adminNav.map((item) => {
+                {mainNav.map((item) => {
                   const active = isActive(item.url);
                   return (
                     <a
@@ -136,6 +207,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         color: active ? "var(--brand-primary)" : "var(--brand-muted)",
                         borderRight: active ? "3px solid var(--brand-primary)" : "3px solid transparent",
                       }}
+                      target={item.openNewTab ? "_blank" : undefined}
+                      rel={item.openNewTab ? "noopener noreferrer" : undefined}
                     >
                       {item.icon && iconMap[item.icon]}
                       {!sidebarCollapsed && <span>{item.name}</span>}
@@ -143,7 +216,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   );
                 })}
               </div>
-            </div>
+
+              {adminNav.length > 0 && (
+                <div className="mt-6">
+                  <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-muted)", opacity: 0.5 }}>
+                    {sidebarCollapsed ? "—" : "Admin"}
+                  </div>
+                  <div className="space-y-1">
+                    {adminNav.map((item) => {
+                      const active = isActive(item.url);
+                      return (
+                        <a
+                          key={item.id}
+                          href={item.url}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all sidebar-item"
+                          style={{
+                            backgroundColor: active ? "var(--brand-primary)" + "15" : "transparent",
+                            color: active ? "var(--brand-primary)" : "var(--brand-muted)",
+                            borderRight: active ? "3px solid var(--brand-primary)" : "3px solid transparent",
+                          }}
+                        >
+                          {item.icon && iconMap[item.icon]}
+                          {!sidebarCollapsed && <span>{item.name}</span>}
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </nav>
 
@@ -210,10 +311,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3">
             <button className="p-2 rounded-lg hover:bg-white/5 relative" style={{ color: "var(--brand-muted)" }}>
               <Bell size={18} />
-              <span
-                className="absolute top-1 right-1 w-2 h-2 rounded-full"
-                style={{ backgroundColor: "var(--brand-danger)" }}
-              />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: "var(--brand-danger)" }} />
             </button>
           </div>
         </header>

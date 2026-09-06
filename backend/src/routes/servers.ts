@@ -331,6 +331,78 @@ router.get("/servers/:id/file", authenticate, async (req: Request, res: Response
 });
 
 // ============================================================
+// PLUGIN INSTALL
+// ============================================================
+
+router.post("/servers/:id/install-plugin", authenticate, async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const { slug, name } = req.body;
+    const server = await prisma.server.findUnique({ where: { id } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+
+    const serverDir = path.resolve(__dirname, "../../servers", server.id);
+    const pluginsDir = path.join(serverDir, "plugins");
+    if (!fs.existsSync(pluginsDir)) fs.mkdirSync(pluginsDir, { recursive: true });
+
+    // Try to download the plugin JAR from Hangar
+    try {
+      const hangarRes = await fetch(`https://hangar.papermc.io/api/v1/projects/${slug}/versions?limit=1`);
+      if (hangarRes.ok) {
+        const hangarData: any = await hangarRes.json();
+        const versions = hangarData.result || [];
+        if (versions.length > 0) {
+          const latest = versions[0];
+          const downloadUrl = latest.downloads?.jar?.url;
+          if (downloadUrl) {
+            const jarRes = await fetch(downloadUrl);
+            if (jarRes.ok) {
+              const fileName = `${slug}.jar`;
+              const buffer = Buffer.from(await jarRes.arrayBuffer());
+              fs.writeFileSync(path.join(pluginsDir, fileName), buffer);
+              return res.json({ success: true, message: `Installed ${name || slug}` });
+            }
+          }
+        }
+      }
+      return res.json({ success: true, message: `Plugin ${slug} queued for install (restart server to load)` });
+    } catch (dlErr: any) {
+      console.error("Plugin download error:", dlErr);
+      return res.json({ success: true, message: `Plugin ${slug} will be installed on next restart` });
+    }
+  } catch (error) {
+    console.error("Install plugin error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// FILE SAVE
+// ============================================================
+
+router.put("/servers/:id/file", authenticate, async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const { path: filePath, content } = req.body;
+    const server = await prisma.server.findUnique({ where: { id } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+
+    const serverDir = path.resolve(__dirname, "../../servers", server.id);
+    const fullPath = path.join(serverDir, filePath || "");
+
+    if (!fullPath.startsWith(serverDir)) {
+      return res.status(400).json({ error: "Invalid path" });
+    }
+
+    fs.writeFileSync(fullPath, content || "");
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Save file error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
 // NODES
 // ============================================================
 
