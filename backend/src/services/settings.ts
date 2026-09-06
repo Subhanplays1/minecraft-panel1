@@ -216,12 +216,13 @@ export class SettingsService {
         customProductName: branding.customProductName,
         customSupportUrl: branding.customSupportUrl,
         customDocsUrl: branding.customDocsUrl,
-        customCss: branding.whiteLabelMode ? undefined : undefined, // Never expose custom CSS to public
+        customCss: branding.whiteLabelMode ? branding.customCss : null,
         maintenanceEnabled: branding.maintenanceEnabled,
         maintenanceTitle: branding.maintenanceTitle,
         maintenanceDescription: branding.maintenanceDescription,
         maintenanceLogo: branding.maintenanceLogo,
         maintenanceStatusUrl: branding.maintenanceStatusUrl,
+        customJs: branding.whiteLabelMode && branding.customJsEnabled ? branding.customJs : null,
       },
       auth: {
         loginTitle: auth.loginTitle,
@@ -399,9 +400,16 @@ export class SettingsService {
   }
 
   async updateAnnouncement(id: string, data: Record<string, unknown>) {
+    const updateData: Record<string, unknown> = { ...data };
+    if (Array.isArray(updateData.locations)) {
+      updateData.locations = JSON.stringify(updateData.locations);
+    }
+    if (Array.isArray(updateData.roles)) {
+      updateData.roles = JSON.stringify(updateData.roles);
+    }
     return prisma.announcement.update({
       where: { id },
-      data,
+      data: updateData,
     });
   }
 
@@ -443,9 +451,13 @@ export class SettingsService {
   }
 
   async updateSocialLink(id: string, data: Record<string, unknown>) {
+    const updateData: Record<string, unknown> = { ...data };
+    if (Array.isArray(updateData.locations)) {
+      updateData.locations = JSON.stringify(updateData.locations);
+    }
     return prisma.socialLink.update({
       where: { id },
-      data,
+      data: updateData,
     });
   }
 
@@ -482,7 +494,10 @@ export class SettingsService {
   }
 
   async updateEmailSettings(data: Record<string, unknown>, tenantId = DEFAULT_TENANT) {
-    await this.getEmailSettings(tenantId);
+    let existing = await prisma.emailSettings.findUnique({ where: { tenantId } });
+    if (!existing) {
+      existing = await prisma.emailSettings.create({ data: { tenantId } });
+    }
     return prisma.emailSettings.update({
       where: { tenantId },
       data,
@@ -533,7 +548,10 @@ export class SettingsService {
   }
 
   async updateFooter(data: Record<string, unknown>, tenantId = DEFAULT_TENANT) {
-    await this.getFooter(tenantId);
+    let existing = await prisma.footerSettings.findUnique({ where: { tenantId } });
+    if (!existing) {
+      existing = await prisma.footerSettings.create({ data: { tenantId } });
+    }
     return prisma.footerSettings.update({
       where: { tenantId },
       data,

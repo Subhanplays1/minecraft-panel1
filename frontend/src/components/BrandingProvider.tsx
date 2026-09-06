@@ -70,6 +70,44 @@ function applyTheme(settings: PublicSettings) {
   root.style.setProperty("--font-body", branding.bodyFont);
   root.style.setProperty("--font-code", branding.codeFont);
 
+  // Apply background
+  let bgStyle = "";
+  if (branding.bgType === "solid") {
+    bgStyle = branding.bgColor1 || branding.backgroundColor;
+  } else if (branding.bgType === "gradient") {
+    bgStyle = `linear-gradient(${branding.bgDirection || "to bottom right"}, ${branding.bgColor1 || "#09090B"}, ${branding.bgColor2 || "#18181B"})`;
+  } else if (branding.bgType === "image" && branding.bgImage) {
+    bgStyle = `url(/${branding.bgImage}) center / ${branding.bgSize || "cover"} ${branding.bgRepeat || "no-repeat"}`;
+  } else if (branding.bgType === "video" && branding.bgVideo) {
+    bgStyle = `url(/${branding.bgVideo}) center / cover no-repeat`;
+  }
+  if (bgStyle) {
+    root.style.background = bgStyle;
+    root.style.backgroundAttachment = "fixed";
+  }
+  if (branding.bgOpacity !== undefined && branding.bgOpacity < 1) {
+    root.style.opacity = String(branding.bgOpacity);
+  }
+
+  // Apply custom font
+  if (branding.customFontUrl && branding.customFontName) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = `/${branding.customFontUrl}`;
+    document.head.appendChild(link);
+  }
+
+  // Apply custom CSS
+  if (branding.customCss) {
+    let styleEl = document.getElementById("brand-custom-css") as HTMLStyleElement;
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = "brand-custom-css";
+      document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = branding.customCss;
+  }
+
   // Apply favicon
   if (branding.favicon) {
     const link = document.querySelector("link[rel='icon']") as HTMLLinkElement || document.createElement("link");

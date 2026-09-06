@@ -306,6 +306,8 @@ export interface PublicSettings {
     maintenanceDescription: string;
     maintenanceLogo: string | null;
     maintenanceStatusUrl: string | null;
+    customCss: string | null;
+    customJs: string | null;
   };
   auth: Record<string, unknown>;
   navigation: Array<{ id: string; name: string; icon?: string; url: string; section: string; sortOrder: number; isVisible: boolean }>;
