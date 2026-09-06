@@ -82,11 +82,14 @@ function applyTheme(settings: PublicSettings) {
     bgStyle = `url(/${branding.bgVideo}) center / cover no-repeat`;
   }
   if (bgStyle) {
-    root.style.background = bgStyle;
-    root.style.backgroundAttachment = "fixed";
+    document.body.style.background = bgStyle;
+    document.body.style.backgroundAttachment = "fixed";
+    document.body.style.minHeight = "100vh";
   }
   if (branding.bgOpacity !== undefined && branding.bgOpacity < 1) {
-    root.style.opacity = String(branding.bgOpacity);
+    document.body.style.opacity = String(branding.bgOpacity);
+  } else {
+    document.body.style.opacity = "1";
   }
 
   // Apply custom font

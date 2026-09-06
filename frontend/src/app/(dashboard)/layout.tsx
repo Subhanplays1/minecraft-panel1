@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Server, ShoppingBag, FolderOpen, Puzzle, Archive,
   Users, Network, Settings, LogOut, ChevronLeft, ChevronRight, Bell, Search,
   Terminal, Play, Square, RotateCcw, HardDrive, ArrowLeft, ExternalLink,
-  Cpu, Shield, Globe
+  Cpu, Shield, Globe, FileText, Link2, UserPlus, Wifi
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -64,7 +64,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user || !settings) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--brand-background)" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "transparent" }}>
         <div className="animate-pulse text-lg" style={{ color: "var(--brand-muted)" }}>Loading...</div>
       </div>
     );
@@ -82,11 +82,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
 
   const serverNavItems = [
-    { id: "console", name: "Console", icon: <Terminal size={20} />, url: `/servers/${serverId}` },
-    { id: "files", name: "Files", icon: <FolderOpen size={20} />, url: `/servers/${serverId}/files` },
+    { id: "console", name: "Terminal", icon: <Terminal size={20} />, url: `/servers/${serverId}` },
+    { id: "properties", name: "Properties", icon: <FileText size={20} />, url: `/servers/${serverId}/properties` },
+    { id: "files", name: "File Manager", icon: <FolderOpen size={20} />, url: `/servers/${serverId}/files` },
+    { id: "sftp", name: "SFTP Details", icon: <Link2 size={20} />, url: `/servers/${serverId}/sftp` },
+    { id: "users", name: "Sub-Users", icon: <UserPlus size={20} />, url: `/servers/${serverId}/users` },
     { id: "plugins", name: "Plugins", icon: <Puzzle size={20} />, url: `/servers/${serverId}/plugins` },
-    { id: "backups", name: "Backups", icon: <Archive size={20} />, url: `/servers/${serverId}/backups` },
     { id: "settings", name: "Settings", icon: <Settings size={20} />, url: `/servers/${serverId}/settings` },
+    { id: "backups", name: "Backup", icon: <Archive size={20} />, url: `/servers/${serverId}/backups` },
+    { id: "tunnel", name: "Playit Tunnel", icon: <Wifi size={20} />, url: `/servers/${serverId}/tunnel` },
   ];
 
   const statusColor = (s: string) => {
@@ -97,7 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: "var(--brand-background)" }}>
+    <div className="min-h-screen flex" style={{ backgroundColor: "transparent" }}>
       {/* Sidebar */}
       <aside
         className="fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 animate-slide-in-left"
