@@ -12,15 +12,20 @@ A full-featured white-label Minecraft server hosting panel with real server crea
 
 ### Prerequisites
 
-- Node.js 18+ (Java 21+ for Minecraft servers)
+- **Node.js 20+** (required - older versions will fail with syntax errors)
+- Java 21+ for Minecraft servers
 - npm
+- Linux recommended for production (Playit tunnel requires Linux)
 
 ### Installation
 
 ```bash
 # Clone the repo
-git clone https://github.com/Subhanplays1/minecraft-panel.git
+git clone https://github.com/Subhanplays1/minecraft-panel1.git
 cd minecraft-panel
+
+# If using nvm, use the right Node version
+nvm use
 
 # Install backend dependencies
 cd backend
