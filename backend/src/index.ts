@@ -17,6 +17,7 @@ import brandingRoutes from "./routes/branding";
 import serverRoutes from "./routes/servers";
 import { handleUploadError } from "./services/upload";
 import { stopLocalServer, isRunning } from "./services/processManager";
+import { startSftpServer, stopSftpServer } from "./services/sftpServer";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3001");
@@ -93,6 +94,7 @@ async function gracefulShutdown(signal: string) {
     }
     // Mark all as STOPPED in DB
     await prisma.server.updateMany({ where: { status: "RUNNING" }, data: { status: "STOPPED" } });
+    stopSftpServer();
     console.log("[Panel] All servers stopped.");
   } catch (e: any) {
     console.error("[Panel] Shutdown error:", e.message);
@@ -146,6 +148,7 @@ async function main() {
       console.log(`Server running on port ${PORT}`);
       console.log(`API: http://localhost:${PORT}/api`);
       console.log(`Health: http://localhost:${PORT}/api/health`);
+      startSftpServer();
     });
   } catch (error) {
     console.error("Failed to start server:", error);

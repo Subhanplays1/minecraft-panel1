@@ -348,6 +348,36 @@ router.post("/servers/:id/command", authenticate, async (req: Request, res: Resp
 });
 
 // ============================================================
+// SFTP INFO
+// ============================================================
+
+router.get("/servers/:id/sftp", authenticate, async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+
+    if (req.user!.role !== "ADMIN" && server.userId !== req.user!.userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: server.userId } });
+    const sftpPort = parseInt(process.env.SFTP_PORT || "2022");
+
+    return res.json({
+      host: process.env.SFTP_HOST || "127.0.0.1",
+      port: sftpPort,
+      username: user?.email || "unknown",
+      password: "Use your panel password",
+      serverPath: `/`,
+      note: "Login with your panel email and password. Your files are in the server root directory.",
+    });
+  } catch (error) {
+    console.error("Get SFTP info error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
 // FILES
 // ============================================================
 

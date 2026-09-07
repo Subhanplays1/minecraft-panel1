@@ -9,3 +9,4 @@ backend/prisma/*.db
 backend/uploads/
 uploads/
 *.tsbuildinfo
+backend/.sftp_host_key
