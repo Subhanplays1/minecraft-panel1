@@ -91,6 +91,52 @@ router.post("/servers", authenticate, async (req: Request, res: Response) => {
       return res.status(400).json({ error: `Port ${port || 25565} is already in use` });
     }
 
+    // Enforce resource limits
+    const userId = req.user!.userId;
+    const userServers = await prisma.server.findMany({ where: { userId } });
+
+    // Get default limits
+    const limitSetting = await prisma.setting.findFirst({ where: { group: "limits", key: "defaults" } });
+    const defaultLimits = limitSetting ? JSON.parse(limitSetting.value) : {
+      maxServers: 5, maxRamPerServer: 4096, maxDiskPerServer: 20480,
+      maxCpuPerServer: 100, maxTotalRam: 16384, maxTotalDisk: 102400,
+    };
+
+    // Check server count limit
+    if (userServers.length >= defaultLimits.maxServers) {
+      return res.status(400).json({ error: `Server limit reached. Maximum ${defaultLimits.maxServers} servers allowed.` });
+    }
+
+    // Check per-server RAM limit
+    const reqRam = ram || 2048;
+    if (reqRam > defaultLimits.maxRamPerServer) {
+      return res.status(400).json({ error: `RAM limit exceeded. Maximum ${defaultLimits.maxRamPerServer}MB per server.` });
+    }
+
+    // Check per-server disk limit
+    const reqDisk = disk || 10240;
+    if (reqDisk > defaultLimits.maxDiskPerServer) {
+      return res.status(400).json({ error: `Disk limit exceeded. Maximum ${defaultLimits.maxDiskPerServer}MB per server.` });
+    }
+
+    // Check per-server CPU limit
+    const reqCpu = cpu || 100;
+    if (reqCpu > defaultLimits.maxCpuPerServer) {
+      return res.status(400).json({ error: `CPU limit exceeded. Maximum ${defaultLimits.maxCpuPerServer}% per server.` });
+    }
+
+    // Check total RAM limit
+    const totalRamUsed = userServers.reduce((sum, s) => sum + s.ram, 0);
+    if (totalRamUsed + reqRam > defaultLimits.maxTotalRam) {
+      return res.status(400).json({ error: `Total RAM limit exceeded. You have ${(totalRamUsed / 1024).toFixed(0)}GB used, trying to add ${(reqRam / 1024).toFixed(0)}GB. Max: ${(defaultLimits.maxTotalRam / 1024).toFixed(0)}GB.` });
+    }
+
+    // Check total disk limit
+    const totalDiskUsed = userServers.reduce((sum, s) => sum + s.disk, 0);
+    if (totalDiskUsed + reqDisk > defaultLimits.maxTotalDisk) {
+      return res.status(400).json({ error: `Total disk limit exceeded. You have ${(totalDiskUsed / 1024).toFixed(0)}GB used, trying to add ${(reqDisk / 1024).toFixed(0)}GB. Max: ${(defaultLimits.maxTotalDisk / 1024).toFixed(0)}GB.` });
+    }
+
     // Get or create local node
     let node = nodeId ? await prisma.node.findUnique({ where: { id: nodeId } }) : await prisma.node.findFirst();
     if (!node) {

@@ -9,42 +9,43 @@ import {
 } from "lucide-react";
 
 const SETTINGS_NAV = [
-  { href: "/admin/settings/branding", label: "Branding", icon: <Palette size={18} /> },
-  { href: "/admin/settings/navigation", label: "Navigation", icon: <Navigation size={18} /> },
-  { href: "/admin/settings/features", label: "Features", icon: <Flag size={18} /> },
-  { href: "/admin/settings/email", label: "Email", icon: <Mail size={18} /> },
-  { href: "/admin/settings/announcements", label: "Announcements", icon: <Bell size={18} /> },
-  { href: "/admin/settings/social", label: "Social Links", icon: <MessageCircle size={18} /> },
-  { href: "/admin/settings/maintenance", label: "Maintenance", icon: <Wrench size={18} /> },
+  { href: "/admin/settings/branding", label: "Branding", icon: <Palette size={15} strokeWidth={1.5} /> },
+  { href: "/admin/settings/navigation", label: "Navigation", icon: <Navigation size={15} strokeWidth={1.5} /> },
+  { href: "/admin/settings/features", label: "Features", icon: <Flag size={15} strokeWidth={1.5} /> },
+  { href: "/admin/settings/email", label: "Email", icon: <Mail size={15} strokeWidth={1.5} /> },
+  { href: "/admin/settings/announcements", label: "Announcements", icon: <Bell size={15} strokeWidth={1.5} /> },
+  { href: "/admin/settings/social", label: "Social Links", icon: <MessageCircle size={15} strokeWidth={1.5} /> },
+  { href: "/admin/settings/maintenance", label: "Maintenance", icon: <Wrench size={15} strokeWidth={1.5} /> },
 ];
 
 export default function AdminSettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="flex">
+    <div className="flex min-h-[calc(100vh-48px)]">
       {/* Settings sub-sidebar */}
       <aside
-        className="w-56 flex-shrink-0"
+        className="w-52 flex-shrink-0 hidden md:block"
         style={{ borderRight: "1px solid var(--brand-border)" }}
       >
-        <div className="px-4 py-4" style={{ borderBottom: "1px solid var(--brand-border)" }}>
+        <div className="px-3.5 py-3" style={{ borderBottom: "1px solid var(--brand-border)" }}>
           <div className="flex items-center gap-2">
-            <Settings size={16} style={{ color: "var(--brand-primary)" }} />
-            <span className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>Settings</span>
+            <Settings size={14} strokeWidth={1.5} style={{ color: "var(--brand-muted)" }} />
+            <span className="text-[12px] font-medium" style={{ color: "var(--brand-text)" }}>Settings</span>
           </div>
         </div>
-        <nav className="py-2">
+        <nav className="py-1.5 px-1.5">
           {SETTINGS_NAV.map((item) => {
-            const isActive = pathname === item.href;
+            const active = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-2.5 px-4 py-2 text-sm transition-colors"
+                className="flex items-center gap-2 px-2.5 py-[7px] rounded-md text-[12px] transition-all duration-150"
                 style={{
-                  backgroundColor: isActive ? "var(--brand-primary)" + "15" : "transparent",
-                  color: isActive ? "var(--brand-primary)" : "var(--brand-muted)",
+                  backgroundColor: active ? "rgba(255,255,255,0.06)" : "transparent",
+                  color: active ? "var(--brand-text)" : "var(--brand-muted)",
+                  fontWeight: active ? 500 : 400,
                 }}
               >
                 {item.icon}

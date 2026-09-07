@@ -65,6 +65,31 @@ export default function NewServerPage() {
   const [pvp, setPvp] = useState(true)
   const [onlineMode, setOnlineMode] = useState(true)
   const [autoStart, setAutoStart] = useState(false)
+  const [limits, setLimits] = useState({ maxServers: 5, maxRamPerServer: 4096, maxDiskPerServer: 20480, maxCpuPerServer: 100, maxTotalRam: 16384, maxTotalDisk: 102400 })
+  const [userServerCount, setUserServerCount] = useState(0)
+  const [userTotalRam, setUserTotalRam] = useState(0)
+  const [userTotalDisk, setUserTotalDisk] = useState(0)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    // Fetch limits
+    fetch("/api/admin/limits", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => { if (d && !d.error) setLimits(d) })
+      .catch(() => {})
+    // Fetch user servers for usage
+    fetch("/api/servers", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d)) {
+          setUserServerCount(d.length)
+          setUserTotalRam(d.reduce((sum: number, s: any) => sum + (s.ram || 0), 0))
+          setUserTotalDisk(d.reduce((sum: number, s: any) => sum + (s.disk || 0), 0))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -107,6 +132,7 @@ export default function NewServerPage() {
 
   const handleCreate = async () => {
     setCreating(true)
+    setError("")
     try {
       const token = localStorage.getItem("token")
       const res = await fetch("/api/servers", {
@@ -127,12 +153,14 @@ export default function NewServerPage() {
           autoStart,
         }),
       })
+      const data = await res.json()
       if (res.ok) {
-        const server = await res.json()
-        router.push(`/servers/${server.id}`)
+        router.push(`/servers/${data.id}`)
+      } else {
+        setError(data.error || "Failed to create server")
       }
     } catch (e) {
-      console.error(e)
+      setError("Failed to create server")
     } finally {
       setCreating(false)
     }
@@ -327,28 +355,33 @@ export default function NewServerPage() {
 
             {/* RAM */}
             <div className="mb-6">
-              <label className="text-sm font-medium mb-2 block" style={{ color: "var(--brand-text)" }}>
-                RAM: {Math.floor(ram / 1024)} GB ({ram} MB)
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
+                  RAM: {Math.floor(ram / 1024)} GB ({ram} MB)
+                </label>
+                <span className="text-[11px]" style={{ color: "var(--brand-muted)" }}>
+                  Limit: {limits.maxRamPerServer / 1024}GB per server &middot; {(limits.maxTotalRam - userTotalRam) / 1024}GB remaining
+                </span>
+              </div>
               <input
                 type="range"
                 min={512}
-                max={Math.min(16384, availableRam || 16384)}
+                max={Math.min(limits.maxRamPerServer, availableRam || limits.maxRamPerServer)}
                 step={256}
                 value={ram}
                 onChange={(e) => setRam(parseInt(e.target.value))}
-                className="w-full accent-purple-500"
+                className="w-full accent-white"
               />
               <div className="flex flex-wrap gap-2 mt-2">
-                {RAM_PRESETS.filter((p) => p.value <= (availableRam || 16384)).map((p) => (
+                {RAM_PRESETS.filter((p) => p.value <= limits.maxRamPerServer && p.value <= (availableRam || limits.maxRamPerServer)).map((p) => (
                   <button
                     key={p.value}
                     onClick={() => setRam(p.value)}
                     className="px-3 py-1 rounded text-xs transition-all"
                     style={{
-                      backgroundColor: ram === p.value ? "var(--brand-primary)" : "var(--brand-background)",
-                      border: `1px solid ${ram === p.value ? "var(--brand-primary)" : "var(--brand-border)"}`,
-                      color: ram === p.value ? "white" : "var(--brand-muted)",
+                      backgroundColor: ram === p.value ? "var(--brand-text)" : "var(--brand-background)",
+                      border: `1px solid ${ram === p.value ? "var(--brand-text)" : "var(--brand-border)"}`,
+                      color: ram === p.value ? "var(--brand-background)" : "var(--brand-muted)",
                     }}
                   >
                     {p.label}
@@ -359,34 +392,53 @@ export default function NewServerPage() {
 
             {/* Disk */}
             <div className="mb-6">
-              <label className="text-sm font-medium mb-2 block" style={{ color: "var(--brand-text)" }}>
-                Disk: {Math.floor(disk / 1024)} GB ({disk} MB)
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
+                  Disk: {Math.floor(disk / 1024)} GB ({disk} MB)
+                </label>
+                <span className="text-[11px]" style={{ color: "var(--brand-muted)" }}>
+                  Limit: {limits.maxDiskPerServer / 1024}GB per server &middot; {(limits.maxTotalDisk - userTotalDisk) / 1024}GB remaining
+                </span>
+              </div>
               <input
                 type="range"
                 min={1024}
-                max={Math.min(204800, availableDisk || 204800)}
+                max={Math.min(limits.maxDiskPerServer, availableDisk || limits.maxDiskPerServer)}
                 step={1024}
                 value={disk}
                 onChange={(e) => setDisk(parseInt(e.target.value))}
-                className="w-full accent-purple-500"
+                className="w-full accent-white"
               />
             </div>
 
             {/* CPU */}
             <div className="mb-6">
-              <label className="text-sm font-medium mb-2 block" style={{ color: "var(--brand-text)" }}>
-                CPU: {cpu}%
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
+                  CPU: {cpu}%
+                </label>
+                <span className="text-[11px]" style={{ color: "var(--brand-muted)" }}>
+                  Limit: {limits.maxCpuPerServer}% per server
+                </span>
+              </div>
               <input
                 type="range"
                 min={10}
-                max={400}
+                max={limits.maxCpuPerServer}
                 step={10}
                 value={cpu}
                 onChange={(e) => setCpu(parseInt(e.target.value))}
-                className="w-full accent-purple-500"
+                className="w-full accent-white"
               />
+            </div>
+
+            {/* Server count limit */}
+            <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: "var(--brand-background)", border: "1px solid var(--brand-border)" }}>
+              <div className="flex items-center justify-between text-[12px]">
+                <span style={{ color: "var(--brand-muted)" }}>Servers: {userServerCount} / {limits.maxServers}</span>
+                <span style={{ color: "var(--brand-muted)" }}>Total RAM: {(userTotalRam / 1024).toFixed(1)} / {(limits.maxTotalRam / 1024).toFixed(0)} GB</span>
+                <span style={{ color: "var(--brand-muted)" }}>Total Disk: {(userTotalDisk / 1024).toFixed(0)} / {(limits.maxTotalDisk / 1024).toFixed(0)} GB</span>
+              </div>
             </div>
 
             {/* Port */}
@@ -530,6 +582,11 @@ export default function NewServerPage() {
             className="px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50"
             style={{ backgroundColor: "var(--brand-primary)", color: "white" }}
           >
+            {error && (
+              <div className="mb-3 p-3 rounded-lg text-[12px]" style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid var(--brand-border)", color: "var(--brand-text)" }}>
+                {error}
+              </div>
+            )}
             {creating ? (
               <>
                 <div className="spinner" />
