@@ -21,48 +21,46 @@ const BrandingContext = createContext<BrandingContextType>({
 
 export function useBranding() { return useContext(BrandingContext); }
 
-const darkTheme = {
+const darkTheme: Record<string, string> = {
   "--brand-primary": "#FFFFFF",
   "--brand-secondary": "#A3A3A3",
   "--brand-accent": "#D4D4D4",
-  "--brand-background": "#09090B",
-  "--brand-sidebar": "#0A0A0C",
-  "--brand-card": "#131316",
-  "--brand-border": "#1F1F23",
+  "--brand-background": "#080808",
+  "--brand-sidebar": "#0A0A0A",
+  "--brand-card": "#111111",
+  "--brand-border": "#1C1C1C",
   "--brand-text": "#FAFAFA",
-  "--brand-muted": "#71717A",
-  "--brand-success": "#22C55E",
-  "--brand-warning": "#EAB308",
-  "--brand-danger": "#EF4444",
-  "--brand-info": "#3B82F6",
+  "--brand-muted": "#666666",
+  "--brand-success": "#FFFFFF",
+  "--brand-warning": "#999999",
+  "--brand-danger": "#666666",
+  "--brand-info": "#CCCCCC",
 };
 
-const lightTheme = {
-  "--brand-primary": "#18181B",
+const lightTheme: Record<string, string> = {
+  "--brand-primary": "#000000",
   "--brand-secondary": "#52525B",
   "--brand-accent": "#27272A",
-  "--brand-background": "#FAFAFA",
+  "--brand-background": "#F5F5F5",
   "--brand-sidebar": "#FFFFFF",
   "--brand-card": "#FFFFFF",
-  "--brand-border": "#E4E4E7",
-  "--brand-text": "#09090B",
-  "--brand-muted": "#A1A1AA",
-  "--brand-success": "#16A34A",
-  "--brand-warning": "#CA8A04",
-  "--brand-danger": "#DC2626",
-  "--brand-info": "#2563EB",
+  "--brand-border": "#E5E5E5",
+  "--brand-text": "#0A0A0A",
+  "--brand-muted": "#888888",
+  "--brand-success": "#000000",
+  "--brand-warning": "#666666",
+  "--brand-danger": "#555555",
+  "--brand-info": "#333333",
 };
 
 function applyThemeVars(theme: "dark" | "light", branding?: PublicSettings["branding"]) {
   const root = document.documentElement;
+  root.setAttribute("data-theme", theme);
   const vars = theme === "dark" ? darkTheme : lightTheme;
-
-  // Apply theme defaults
   for (const [key, value] of Object.entries(vars)) {
     root.style.setProperty(key, value);
   }
 
-  // Override with branding if available
   if (branding) {
     root.style.setProperty("--brand-primary", branding.primaryColor);
     root.style.setProperty("--brand-secondary", branding.secondaryColor);
@@ -82,9 +80,9 @@ function applyThemeVars(theme: "dark" | "light", branding?: PublicSettings["bran
     root.style.setProperty("--font-code", branding.codeFont);
 
     if (branding.bgType === "solid") document.body.style.background = branding.bgColor1 || branding.backgroundColor;
-    else if (branding.bgType === "gradient") document.body.style.background = `linear-gradient(${branding.bgDirection || "to bottom right"}, ${branding.bgColor1 || "#09090B"}, ${branding.bgColor2 || "#131316"})`;
+    else if (branding.bgType === "gradient") document.body.style.background = `linear-gradient(${branding.bgDirection || "to bottom right"}, ${branding.bgColor1 || "#080808"}, ${branding.bgColor2 || "#111111"})`;
     else if (branding.bgType === "image" && branding.bgImage) document.body.style.background = `url(/${branding.bgImage}) center / ${branding.bgSize || "cover"} ${branding.bgRepeat || "no-repeat"}`;
-    else document.body.style.background = theme === "dark" ? "#09090B" : "#FAFAFA";
+    else document.body.style.background = theme === "dark" ? "#080808" : "#F5F5F5";
     document.body.style.backgroundAttachment = "fixed";
 
     if (branding.customCss) {
@@ -97,11 +95,11 @@ function applyThemeVars(theme: "dark" | "light", branding?: PublicSettings["bran
       if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
       link.href = `/${branding.favicon}`;
     }
-    if (branding.panelName) document.title = `${branding.panelName} - Minecraft Hosting`;
+    if (branding.panelName) document.title = `${branding.panelName} — Minecraft Hosting`;
   } else {
-    document.body.style.background = theme === "dark" ? "#09090B" : "#FAFAFA";
+    document.body.style.background = theme === "dark" ? "#080808" : "#F5F5F5";
     document.body.style.backgroundAttachment = "fixed";
-    document.title = "Minevo - Minecraft Server Hosting";
+    document.title = "Minevo — Minecraft Hosting";
   }
 }
 
@@ -131,8 +129,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
       const data = await brandingApi.getPublic();
       setSettings(data);
       applyThemeVars(theme, data.branding);
-    } catch (error) {
-      console.error("Failed to load branding:", error);
+    } catch {
       applyThemeVars(theme);
     } finally { setLoading(false); }
   }, [theme]);
