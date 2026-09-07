@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--brand-background)" }}>
         <div className="text-center">
           <div className="w-10 h-10 mx-auto rounded-lg flex items-center justify-center animate-pulse-slow" style={{ backgroundColor: "#1a1a1a", border: "1px solid #222" }}>
-            <img src="/logo.svg" alt="Minevo" className="w-6 h-6" />
+            <img src="/logo.svg" alt="Minevo" className="h-5 w-auto" />
           </div>
           <div className="mt-3 text-xs font-medium tracking-wide" style={{ color: "#666" }}>MINEVO</div>
         </div>
@@ -158,7 +158,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </>
           ) : (
             <>
-              <img src="/logo.svg" alt="Minevo" className="w-7 h-7" />
+              <img src="/logo.svg" alt="Minevo" className="h-6 w-auto" />
               {!collapsed && <span className="text-[13px] font-semibold tracking-tight" style={{ color: "var(--brand-text)" }}>Minevo</span>}
             </>
           )}

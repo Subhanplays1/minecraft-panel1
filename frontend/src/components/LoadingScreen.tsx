@@ -18,7 +18,7 @@ export default function LoadingScreen() {
   return (
     <div className="loading-screen">
       <div className="loading-logo">
-        <img src="/logo.svg" alt="Minevo" width="40" height="40" />
+        <img src="/logo.svg" alt="Minevo" className="h-10 w-auto" />
       </div>
       <div className="mt-6 text-lg font-semibold" style={{ color: "var(--brand-text)" }}>Minevo</div>
       <div className="text-sm mt-1" style={{ color: "var(--brand-muted)" }}>Loading your panel...</div>

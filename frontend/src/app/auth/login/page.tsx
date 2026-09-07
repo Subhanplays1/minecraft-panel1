@@ -42,7 +42,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px] px-5 relative z-10 animate-fade-in-up">
         {/* Logo */}
         <div className="flex items-center gap-3 mb-10">
-          <img src="/logo.svg" alt={panelName} className="w-9 h-9" />
+          <img src="/logo.svg" alt={panelName} className="h-8 w-auto" />
           <span className="text-[14px] font-semibold tracking-tight" style={{ color: "var(--brand-text)" }}>{panelName}</span>
         </div>
 

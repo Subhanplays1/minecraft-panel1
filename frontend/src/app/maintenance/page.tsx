@@ -26,7 +26,7 @@ export default function MaintenancePage() {
         ) : settings.branding.mainLogo ? (
           <img src={`/${settings.branding.mainLogo}`} alt="Logo" className="h-16 mx-auto mb-6 object-contain" />
         ) : (
-          <img src="/logo.svg" alt="Logo" className="h-16 mx-auto mb-6" />
+          <img src="/logo.svg" alt="Logo" className="h-16 w-auto mx-auto mb-6" />
         )}
 
         <h1
