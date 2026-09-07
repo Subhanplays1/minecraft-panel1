@@ -45,19 +45,19 @@ export default function ServerPluginsPage() {
                       serverInfo?.software === "spigot" ? ["spigot"] :
                       serverInfo?.software === "purpur" ? ["purpur"] :
                       ["bukkit", "spigot", "paper", "purpur"]
-      const versions = serverInfo?.mcVersion ? [serverInfo.mcVersion] : []
+      const facets: string[][] = [["project_type:plugin"]]
+      if (loaders.length > 0) {
+        facets.push(loaders.map(l => `server_types:${l}`))
+      }
       const params = new URLSearchParams({
         query: q,
         limit: "20",
         index: "relevance",
-        facets: JSON.stringify([
-          ["project_type:plugin"],
-          ["categories:fabric"].length ? [] : [],
-          loaders.length ? [`server_types:${loaders.join(",")}`] : [],
-        ].filter(f => f.length > 0)),
+        facets: JSON.stringify(facets),
       })
-      if (loaders.length) params.set("facets", JSON.stringify([["project_type:plugin"], [`server_types:${loaders.join(",")}`]]))
-      const res = await fetch(`https://api.modrinth.com/v2/search?${params}`)
+      const res = await fetch(`https://api.modrinth.com/v2/search?${params}`, {
+        headers: { "User-Agent": "Minevo-Panel/1.0" }
+      })
       if (res.ok) {
         const data = await res.json()
         const results: Plugin[] = (data.hits || []).map((p: any) => ({
@@ -81,7 +81,9 @@ export default function ServerPluginsPage() {
   const searchHangar = async (q: string) => {
     setLoading(true)
     try {
-      const res = await fetch(`https://hangar.papermc.io/api/v1/projects?q=${encodeURIComponent(q)}&limit=20`)
+      const res = await fetch(`https://hangar.papermc.io/api/v1/projects?q=${encodeURIComponent(q)}&limit=20`, {
+        headers: { "User-Agent": "Minevo-Panel/1.0" }
+      })
       if (res.ok) {
         const data = await res.json()
         const results: Plugin[] = (data.result || []).map((p: any) => ({

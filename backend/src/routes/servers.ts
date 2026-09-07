@@ -458,7 +458,7 @@ router.post("/servers/:id/install-plugin", authenticate, async (req: Request, re
     // Modrinth install
     if (source === "modrinth") {
       try {
-        const projectRes = await fetch(`https://api.modrinth.com/v2/project/${slug}`);
+        const projectRes = await fetch(`https://api.modrinth.com/v2/project/${slug}`, { headers: { "User-Agent": "Minevo-Panel/1.0" } });
         if (!projectRes.ok) return res.status(404).json({ error: "Plugin not found on Modrinth" });
         const project: any = await projectRes.json();
 
@@ -472,7 +472,7 @@ router.post("/servers/:id/install-plugin", authenticate, async (req: Request, re
           game_versions: JSON.stringify([server.mcVersion]),
           limit: "1",
         });
-        const versionRes = await fetch(`https://api.modrinth.com/v2/project/${slug}/version?${versionParams}`);
+        const versionRes = await fetch(`https://api.modrinth.com/v2/project/${slug}/version?${versionParams}`, { headers: { "User-Agent": "Minevo-Panel/1.0" } });
         if (!versionRes.ok) return res.status(404).json({ error: "No compatible version found" });
         const versions: any = await versionRes.json();
         if (versions.length === 0) return res.status(404).json({ error: "No compatible version found for your server" });
@@ -481,7 +481,7 @@ router.post("/servers/:id/install-plugin", authenticate, async (req: Request, re
         const file = version.files.find((f: any) => f.primary) || version.files[0];
         if (!file || !file.url) return res.status(404).json({ error: "No download URL found" });
 
-        const jarRes = await fetch(file.url);
+        const jarRes = await fetch(file.url, { headers: { "User-Agent": "Minevo-Panel/1.0" } });
         if (!jarRes.ok) return res.status(500).json({ error: "Failed to download plugin" });
         const buffer = Buffer.from(await jarRes.arrayBuffer());
         const fileName = file.filename || `${slug}.jar`;
@@ -497,7 +497,7 @@ router.post("/servers/:id/install-plugin", authenticate, async (req: Request, re
     // Hangar install (default)
     try {
       const hangarUrl = owner ? `https://hangar.papermc.io/api/v1/projects/${owner}/${slug}/versions?limit=1` : `https://hangar.papermc.io/api/v1/projects/${slug}/versions?limit=1`;
-      const hangarRes = await fetch(hangarUrl);
+      const hangarRes = await fetch(hangarUrl, { headers: { "User-Agent": "Minevo-Panel/1.0" } });
       if (hangarRes.ok) {
         const hangarData: any = await hangarRes.json();
         const versions = hangarData.result || [];
@@ -507,7 +507,7 @@ router.post("/servers/:id/install-plugin", authenticate, async (req: Request, re
           const dl = latest.downloads?.[platform] || latest.downloads?.PAPER || {};
           const downloadUrl = dl.downloadUrl;
           if (downloadUrl) {
-            const jarRes = await fetch(downloadUrl);
+            const jarRes = await fetch(downloadUrl, { headers: { "User-Agent": "Minevo-Panel/1.0" } });
             if (jarRes.ok) {
               const fileName = dl.fileInfo?.name || `${slug}.jar`;
               const buffer = Buffer.from(await jarRes.arrayBuffer());
