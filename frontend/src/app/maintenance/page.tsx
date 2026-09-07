@@ -26,12 +26,7 @@ export default function MaintenancePage() {
         ) : settings.branding.mainLogo ? (
           <img src={`/${settings.branding.mainLogo}`} alt="Logo" className="h-16 mx-auto mb-6 object-contain" />
         ) : (
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-6"
-            style={{ backgroundColor: "var(--brand-primary)", color: "white" }}
-          >
-            {(settings.branding.shortName || settings.branding.panelName || "M")[0]}
-          </div>
+          <img src="/logo.svg" alt="Logo" className="h-16 mx-auto mb-6" />
         )}
 
         <h1

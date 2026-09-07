@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Triangle left -->
+  <path d="M20 90 L20 50 L48 50 L34 90 Z" fill="white"/>
+  <!-- Diagonal bar 1 -->
+  <path d="M34 90 L48 50 L60 50 L46 90 Z" fill="white"/>
+  <!-- Diagonal bar 2 -->
+  <path d="M46 90 L60 50 L72 50 L58 90 Z" fill="white"/>
+  <!-- Diagonal bar 3 -->
+  <path d="M58 90 L72 50 L84 50 L70 90 Z" fill="white"/>
+  <!-- Right V shape -->
+  <path d="M70 90 L84 50 L96 50 L82 90 Z" fill="white"/>
+  <!-- Top horizontal bar -->
+  <path d="M84 50 L96 50 L96 62 L84 62 Z" fill="white"/>
+  <!-- Top cap -->
+  <path d="M72 38 L96 38 L96 50 L72 50 Z" fill="white"/>
+</svg>

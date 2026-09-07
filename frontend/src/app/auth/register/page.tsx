@@ -61,9 +61,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-[400px] px-5 relative z-10 animate-fade-in-up">
         {/* Logo */}
         <div className="flex items-center gap-3 mb-10">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: "var(--brand-text)" }}>
-            <span className="text-[13px] font-bold" style={{ color: "var(--brand-background)" }}>{panelName[0]}</span>
-          </div>
+          <img src="/logo.svg" alt={panelName} className="w-9 h-9" />
           <span className="text-[14px] font-semibold tracking-tight" style={{ color: "var(--brand-text)" }}>{panelName}</span>
         </div>
 

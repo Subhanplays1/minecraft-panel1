@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--brand-background)" }}>
         <div className="text-center">
           <div className="w-10 h-10 mx-auto rounded-lg flex items-center justify-center animate-pulse-slow" style={{ backgroundColor: "#1a1a1a", border: "1px solid #222" }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
+            <img src="/logo.svg" alt="Minevo" className="w-6 h-6" />
           </div>
           <div className="mt-3 text-xs font-medium tracking-wide" style={{ color: "#666" }}>MINEVO</div>
         </div>
@@ -158,9 +158,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </>
           ) : (
             <>
-              <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#1a1a1a", border: "1px solid #222" }}>
-                <span className="text-[11px] font-bold" style={{ color: "#999" }}>M</span>
-              </div>
+              <img src="/logo.svg" alt="Minevo" className="w-7 h-7" />
               {!collapsed && <span className="text-[13px] font-semibold tracking-tight" style={{ color: "var(--brand-text)" }}>Minevo</span>}
             </>
           )}

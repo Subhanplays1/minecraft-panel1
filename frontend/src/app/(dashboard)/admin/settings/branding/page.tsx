@@ -452,9 +452,7 @@ export default function BrandingPage() {
             >
               {/* Mini Sidebar */}
               <div className="h-12 flex items-center px-3 gap-2" style={{ backgroundColor: branding.sidebarColor || "#0A0A0C", borderBottom: "1px solid var(--brand-border)" }}>
-                <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style={{ backgroundColor: branding.primaryColor || "#7C3AED", color: "white" }}>
-                  {(branding.shortName || branding.panelName || "M")[0]}
-                </div>
+                <img src="/logo.svg" alt="Logo" className="w-6 h-6" />
                 <span className="text-xs font-medium" style={{ color: branding.textColor || "#FAFAFA" }}>
                   {branding.shortName || branding.panelName || "Panel"}
                 </span>
