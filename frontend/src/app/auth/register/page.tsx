@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import { useBranding } from "@/components/BrandingProvider"
 import { auth } from "@/lib/api"
 import toast from "react-hot-toast"
-import { Loader2, Eye, EyeOff, Mail, Lock, User, ArrowRight, Check } from "lucide-react"
+import { Loader2, Eye, EyeOff } from "lucide-react"
 
 export default function RegisterPage() {
   const { settings } = useBranding()
@@ -13,8 +13,10 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [focused, setFocused] = useState("")
 
   const authBranding = settings?.auth as Record<string, string> | undefined
+  const panelName = settings?.branding?.panelName || settings?.branding?.shortName || "Minevo"
 
   if (authBranding?.registerEnabled === "false") {
     return (
@@ -22,7 +24,7 @@ export default function RegisterPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--brand-text)" }}>Registration Disabled</h1>
           <p style={{ color: "var(--brand-muted)" }}>Account registration is currently disabled.</p>
-          <a href="/auth/login" className="mt-4 inline-block text-sm hover:underline" style={{ color: "var(--brand-text)" }}>Go to Login</a>
+          <a href="/auth/login" className="mt-4 inline-block text-[13px] font-medium hover:underline" style={{ color: "var(--brand-text)" }}>Go to Login</a>
         </div>
       </div>
     )
@@ -44,140 +46,135 @@ export default function RegisterPage() {
     }
   }
 
-  const panelName = settings?.branding?.panelName || settings?.branding?.shortName || "Minevo"
-  const passwordChecks = [
-    { label: "At least 8 characters", met: password.length >= 8 },
-    { label: "Contains a number", met: /\d/.test(password) },
-    { label: "Contains a letter", met: /[a-zA-Z]/.test(password) },
+  const pw = [
+    { label: "8+ characters", met: password.length >= 8 },
+    { label: "A number", met: /\d/.test(password) },
+    { label: "A letter", met: /[a-zA-Z]/.test(password) },
   ]
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: "var(--brand-background)" }}>
-      {/* Left side — branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center" style={{ backgroundColor: "var(--brand-card)" }}>
-        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.03) 0%, transparent 70%)" }} />
-        <div className="relative z-10 max-w-md px-12">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-8" style={{ backgroundColor: "var(--brand-background)", border: "1px solid var(--brand-border)" }}>
-            <span className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>{panelName[0]}</span>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ backgroundColor: "var(--brand-background)" }}>
+      {/* Background glow */}
+      <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.03]" style={{ background: "radial-gradient(circle, var(--brand-text), transparent 70%)" }} />
+      <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full opacity-[0.02]" style={{ background: "radial-gradient(circle, var(--brand-text), transparent 70%)" }} />
+
+      <div className="w-full max-w-[400px] px-5 relative z-10 animate-fade-in-up">
+        {/* Logo */}
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: "var(--brand-text)" }}>
+            <span className="text-[13px] font-bold" style={{ color: "var(--brand-background)" }}>{panelName[0]}</span>
           </div>
-          <h1 className="text-3xl font-bold leading-tight mb-4" style={{ color: "var(--brand-text)" }}>
-            {authBranding?.registerTitle || "Create an account"}
-          </h1>
-          <p className="text-[14px] leading-relaxed" style={{ color: "var(--brand-muted)" }}>
-            {authBranding?.registerDescription || "Get started with your server."}
-          </p>
-          <div className="mt-10 space-y-3">
-            {["Instant server setup", "Full file manager access", "Plugin installer built-in", "24/7 server uptime"].map((feature) => (
-              <div key={feature} className="flex items-center gap-2.5 text-[13px]" style={{ color: "var(--brand-muted)" }}>
-                <Check size={14} strokeWidth={2} style={{ color: "var(--brand-text)" }} />
-                {feature}
-              </div>
-            ))}
-          </div>
+          <span className="text-[14px] font-semibold tracking-tight" style={{ color: "var(--brand-text)" }}>{panelName}</span>
         </div>
-      </div>
 
-      {/* Right side — form */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-[380px] animate-fade-in-up">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
-              <span className="text-sm font-bold" style={{ color: "var(--brand-text)" }}>{panelName[0]}</span>
-            </div>
-            <span className="text-[15px] font-semibold" style={{ color: "var(--brand-text)" }}>{panelName}</span>
+        {/* Heading */}
+        <h1 className="text-[22px] font-bold tracking-tight mb-1" style={{ color: "var(--brand-text)" }}>
+          {authBranding?.registerTitle || "Create an account"}
+        </h1>
+        <p className="text-[13px] mb-8" style={{ color: "var(--brand-muted)" }}>
+          {authBranding?.registerDescription || "Get started with your server."}
+        </p>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Name */}
+          <div>
+            <label className="block text-[11px] font-medium uppercase tracking-wider mb-1.5" style={{ color: "var(--brand-muted)" }}>Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onFocus={() => setFocused("name")}
+              onBlur={() => setFocused("")}
+              required
+              autoComplete="name"
+              placeholder="Your name"
+              className="w-full px-3.5 py-2.5 rounded-lg text-[13px] outline-none transition-all"
+              style={{
+                backgroundColor: "var(--brand-card)",
+                border: `1px solid ${focused === "name" ? "var(--brand-text)" : "var(--brand-border)"}`,
+                color: "var(--brand-text)",
+              }}
+            />
           </div>
 
-          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--brand-text)" }}>
-            {authBranding?.registerTitle || "Create an account"}
-          </h2>
-          <p className="text-[13px] mb-7" style={{ color: "var(--brand-muted)" }}>
-            {authBranding?.registerDescription || "Get started with your server."}
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-3.5">
-            <div>
-              <label className="block text-[12px] font-medium mb-1.5" style={{ color: "var(--brand-muted)" }}>Full Name</label>
-              <div className="relative">
-                <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--brand-muted)", opacity: 0.5 }} />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className="input pl-10 py-2.5 text-[13px]"
-                  placeholder="John Doe"
-                  autoComplete="name"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[12px] font-medium mb-1.5" style={{ color: "var(--brand-muted)" }}>Email</label>
-              <div className="relative">
-                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--brand-muted)", opacity: 0.5 }} />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="input pl-10 py-2.5 text-[13px]"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[12px] font-medium mb-1.5" style={{ color: "var(--brand-muted)" }}>Password</label>
-              <div className="relative">
-                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--brand-muted)", opacity: 0.5 }} />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="input pl-10 pr-10 py-2.5 text-[13px]"
-                  placeholder="Min. 8 characters"
-                  autoComplete="new-password"
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded transition-colors hover:bg-white/5"
-                  style={{ color: "var(--brand-muted)" }}>
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-              {password.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {passwordChecks.map((check) => (
-                    <div key={check.label} className="flex items-center gap-1.5 text-[10px]" style={{ color: check.met ? "#22C55E" : "var(--brand-muted)", opacity: check.met ? 1 : 0.5 }}>
-                      <div className="w-1 h-1 rounded-full" style={{ backgroundColor: check.met ? "#22C55E" : "var(--brand-muted)" }} />
-                      {check.label}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-lg font-medium text-[13px] transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-5"
-              style={{ backgroundColor: "var(--brand-text)", color: "var(--brand-background)" }}
-            >
-              {loading ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
-              {loading ? "Creating account..." : authBranding?.registerButtonText || "Create Account"}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <span className="text-[12px]" style={{ color: "var(--brand-muted)" }}>Already have an account? </span>
-            <a href="/auth/login" className="text-[12px] font-medium hover:underline" style={{ color: "var(--brand-text)" }}>
-              Sign in
-            </a>
+          {/* Email */}
+          <div>
+            <label className="block text-[11px] font-medium uppercase tracking-wider mb-1.5" style={{ color: "var(--brand-muted)" }}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => setFocused("email")}
+              onBlur={() => setFocused("")}
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              className="w-full px-3.5 py-2.5 rounded-lg text-[13px] outline-none transition-all"
+              style={{
+                backgroundColor: "var(--brand-card)",
+                border: `1px solid ${focused === "email" ? "var(--brand-text)" : "var(--brand-border)"}`,
+                color: "var(--brand-text)",
+              }}
+            />
           </div>
-        </div>
+
+          {/* Password */}
+          <div>
+            <label className="block text-[11px] font-medium uppercase tracking-wider mb-1.5" style={{ color: "var(--brand-muted)" }}>Password</label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setFocused("password")}
+                onBlur={() => setFocused("")}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                placeholder="Min. 8 characters"
+                className="w-full px-3.5 py-2.5 pr-10 rounded-lg text-[13px] outline-none transition-all"
+                style={{
+                  backgroundColor: "var(--brand-card)",
+                  border: `1px solid ${focused === "password" ? "var(--brand-text)" : "var(--brand-border)"}`,
+                  color: "var(--brand-text)",
+                }}
+              />
+              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded transition-colors hover:opacity-70"
+                style={{ color: "var(--brand-muted)" }}>
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            {password.length > 0 && (
+              <div className="flex gap-3 mt-2">
+                {pw.map((c) => (
+                  <div key={c.label} className="flex items-center gap-1 text-[10px]" style={{ color: c.met ? "#22C55E" : "var(--brand-muted)", opacity: c.met ? 1 : 0.4 }}>
+                    <div className="w-1 h-1 rounded-full" style={{ backgroundColor: c.met ? "#22C55E" : "var(--brand-muted)" }} />
+                    {c.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 rounded-lg text-[13px] font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2 mt-2"
+            style={{ backgroundColor: "var(--brand-text)", color: "var(--brand-background)" }}
+          >
+            {loading && <Loader2 className="animate-spin" size={15} />}
+            {loading ? "Creating account..." : authBranding?.registerButtonText || "Create Account"}
+          </button>
+        </form>
+
+        {/* Footer */}
+        <p className="text-center text-[12px] mt-6" style={{ color: "var(--brand-muted)" }}>
+          Already have an account?{" "}
+          <a href="/auth/login" className="font-medium hover:underline" style={{ color: "var(--brand-text)" }}>Sign in</a>
+        </p>
       </div>
     </div>
   )
