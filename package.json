@@ -14,5 +14,8 @@
     "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
     "typecheck:backend": "cd backend && npm run typecheck",
     "typecheck:frontend": "cd frontend && npm run typecheck"
+  },
+  "dependencies": {
+    "concurrently": "^10.0.5"
   }
 }

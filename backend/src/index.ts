@@ -20,6 +20,9 @@ import { handleUploadError } from "./services/upload";
 const app = express();
 const PORT = parseInt(process.env.PORT || "3001");
 
+// Trust proxy (required behind reverse proxies for rate limiting)
+app.set("trust proxy", 1);
+
 // Performance: compression
 app.use(compression());
 
