@@ -61,10 +61,10 @@ export default function RegisterPage() {
             <span className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>{panelName[0]}</span>
           </div>
           <h1 className="text-3xl font-bold leading-tight mb-4" style={{ color: "var(--brand-text)" }}>
-            {authBranding?.registerTitle || "Start hosting today"}
+            {authBranding?.registerTitle || "Create an account"}
           </h1>
           <p className="text-[14px] leading-relaxed" style={{ color: "var(--brand-muted)" }}>
-            {authBranding?.registerDescription || "Create your account and launch a Minecraft server in seconds. Free hosting, no credit card required."}
+            {authBranding?.registerDescription || "Get started with your server."}
           </p>
           <div className="mt-10 space-y-3">
             {["Instant server setup", "Full file manager access", "Plugin installer built-in", "24/7 server uptime"].map((feature) => (
@@ -88,8 +88,12 @@ export default function RegisterPage() {
             <span className="text-[15px] font-semibold" style={{ color: "var(--brand-text)" }}>{panelName}</span>
           </div>
 
-          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--brand-text)" }}>Create account</h2>
-          <p className="text-[13px] mb-7" style={{ color: "var(--brand-muted)" }}>Fill in the details below to get started</p>
+          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--brand-text)" }}>
+            {authBranding?.registerTitle || "Create an account"}
+          </h2>
+          <p className="text-[13px] mb-7" style={{ color: "var(--brand-muted)" }}>
+            {authBranding?.registerDescription || "Get started with your server."}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>

@@ -43,10 +43,10 @@ export default function LoginPage() {
             <span className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>{panelName[0]}</span>
           </div>
           <h1 className="text-3xl font-bold leading-tight mb-4" style={{ color: "var(--brand-text)" }}>
-            {authBranding?.loginTitle || "Welcome back"}
+            {authBranding?.loginTitle || "Welcome back!"}
           </h1>
           <p className="text-[14px] leading-relaxed" style={{ color: "var(--brand-muted)" }}>
-            {authBranding?.loginDescription || "Sign in to manage your Minecraft servers, monitor performance, and configure everything from one place."}
+            {authBranding?.loginDescription || "Sign in to manage your servers."}
           </p>
           <div className="mt-10 flex items-center gap-6 text-[12px]" style={{ color: "var(--brand-muted)" }}>
             <div className="flex items-center gap-2">
@@ -69,8 +69,12 @@ export default function LoginPage() {
             <span className="text-[15px] font-semibold" style={{ color: "var(--brand-text)" }}>{panelName}</span>
           </div>
 
-          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--brand-text)" }}>Sign in</h2>
-          <p className="text-[13px] mb-7" style={{ color: "var(--brand-muted)" }}>Enter your credentials to access your account</p>
+          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--brand-text)" }}>
+            {authBranding?.loginTitle || "Welcome back!"}
+          </h2>
+          <p className="text-[13px] mb-7" style={{ color: "var(--brand-muted)" }}>
+            {authBranding?.loginDescription || "Sign in to manage your servers."}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
