@@ -363,8 +363,21 @@ router.get("/servers/:id/sftp", authenticate, async (req: Request, res: Response
     const user = await prisma.user.findUnique({ where: { id: server.userId } });
     const sftpPort = parseInt(process.env.SFTP_PORT || "2022");
 
+    // Auto-detect host from request domain
+    let host = process.env.SFTP_HOST || "";
+    if (!host) {
+      const forwarded = req.headers["x-forwarded-host"];
+      if (forwarded) {
+        host = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+      } else {
+        host = req.hostname || req.headers.host || "127.0.0.1";
+      }
+      // Strip port if present
+      if (host.includes(":")) host = host.split(":")[0];
+    }
+
     return res.json({
-      host: process.env.SFTP_HOST || "127.0.0.1",
+      host,
       port: sftpPort,
       username: user?.email || "unknown",
       password: "Use your panel password",
