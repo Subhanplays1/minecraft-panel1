@@ -137,7 +137,14 @@ async function seedDefaults() {
       await prisma.authBranding.create({ data: { tenantId: "default" } });
     }
 
-    // Create default navigation
+    // Force-reset navigation to correct items (removes old Store/Files/Plugins/Backups)
+    const allowedNavUrls = ["/dashboard", "/servers", "/profile", "/activity", "/support", "/admin/users", "/admin/nodes", "/admin/limits", "/admin/settings"];
+    const allNavItems = await prisma.navigationItem.findMany();
+    for (const item of allNavItems) {
+      if (!allowedNavUrls.includes(item.url)) {
+        await prisma.navigationItem.delete({ where: { id: item.id } });
+      }
+    }
     const navCount = await prisma.navigationItem.count();
     if (navCount === 0) {
       const defaultNav = [

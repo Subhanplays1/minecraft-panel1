@@ -65,10 +65,10 @@ export default function DashboardPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total Servers", value: myServers.length, icon: <Server size={20} />, gradient: "from-blue-600 to-blue-400", bgColor: "rgba(59,130,246,0.15)" },
-          { label: "Running", value: running, icon: <Play size={20} />, gradient: "from-emerald-600 to-emerald-400", bgColor: "rgba(16,185,129,0.15)" },
-          { label: "Stopped", value: stopped, icon: <Square size={20} />, gradient: "from-red-600 to-red-400", bgColor: "rgba(239,68,68,0.15)" },
-          { label: "Total RAM", value: `${(totalRam / 1024).toFixed(1)} GB`, icon: <Cpu size={20} />, gradient: "from-purple-600 to-purple-400", bgColor: "rgba(168,85,247,0.15)" },
+          { label: "Total Servers", value: myServers.length, icon: <Server size={20} />, color: "var(--brand-primary)" },
+          { label: "Running", value: running, icon: <Play size={20} />, color: "var(--brand-success)" },
+          { label: "Stopped", value: stopped, icon: <Square size={20} />, color: "var(--brand-danger)" },
+          { label: "Total RAM", value: `${(totalRam / 1024).toFixed(1)} GB`, icon: <Cpu size={20} />, color: "var(--brand-info)" },
         ].map((c, i) => (
           <div key={i} className="group p-5 rounded-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
             <div className="flex items-center justify-between">
@@ -76,7 +76,7 @@ export default function DashboardPage() {
                 <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: "var(--brand-muted)" }}>{c.label}</p>
                 <p className="text-2xl font-bold" style={{ color: "var(--brand-text)" }}>{loading ? "—" : c.value}</p>
               </div>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br ${c.gradient} text-white group-hover:scale-110 transition-transform`}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform" style={{ backgroundColor: `color-mix(in srgb, ${c.color} 12%, transparent)`, color: c.color }}>
                 {c.icon}
               </div>
             </div>
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-sm font-medium mb-1" style={{ color: "var(--brand-text)" }}>No servers yet</p>
                 <p className="text-xs mb-4" style={{ color: "var(--brand-muted)" }}>Create your first Minecraft server to get started</p>
-                <button onClick={() => router.push("/servers/new")} className="px-4 py-2 rounded-lg text-xs font-medium text-white hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))" }}>
+                <button onClick={() => router.push("/servers/new")} className="px-4 py-2 rounded-xl text-xs font-semibold transition-opacity hover:opacity-90" style={{ backgroundColor: "var(--brand-text)", color: "var(--brand-background)" }}>
                   <Plus size={14} className="inline mr-1.5 -mt-0.5" /> Create Server
                 </button>
               </div>
@@ -190,22 +190,22 @@ export default function DashboardPage() {
           </div>
 
           {/* Status Card */}
-          <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))" }}>
+          <div className="rounded-2xl p-5" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
             <div className="flex items-center gap-2 mb-3">
-              <Zap size={16} className="text-white" />
-              <span className="text-sm font-semibold text-white">Server Status</span>
+              <Zap size={16} style={{ color: "var(--brand-text)" }} />
+              <span className="text-sm font-semibold" style={{ color: "var(--brand-text)" }}>Server Status</span>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-white/70">Running</span>
-                <span className="text-xs font-bold text-white">{running}</span>
+                <span className="text-xs" style={{ color: "var(--brand-muted)" }}>Running</span>
+                <span className="text-xs font-bold" style={{ color: "var(--brand-success)" }}>{running}</span>
               </div>
-              <div className="w-full h-1.5 rounded-full bg-white/20">
-                <div className="h-full rounded-full bg-white" style={{ width: myServers.length > 0 ? `${(running / myServers.length) * 100}%` : "0%" }} />
+              <div className="w-full h-1.5 rounded-full" style={{ backgroundColor: "var(--brand-border)" }}>
+                <div className="h-full rounded-full transition-all duration-500" style={{ backgroundColor: "var(--brand-success)", width: myServers.length > 0 ? `${(running / myServers.length) * 100}%` : "0%" }} />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-white/70">Stopped</span>
-                <span className="text-xs font-bold text-white">{stopped}</span>
+                <span className="text-xs" style={{ color: "var(--brand-muted)" }}>Stopped</span>
+                <span className="text-xs font-bold" style={{ color: "var(--brand-danger)" }}>{stopped}</span>
               </div>
             </div>
           </div>
@@ -249,7 +249,7 @@ export default function DashboardPage() {
               ) : stats.recentUsers.map((u) => (
                 <div key={u.id} className="flex items-center justify-between p-2.5 rounded-lg">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))", color: "white" }}>{u.name[0].toUpperCase()}</div>
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: "var(--brand-text)", color: "var(--brand-background)" }}>{u.name[0].toUpperCase()}</div>
                     <div>
                       <div className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>{u.name}</div>
                       <div className="text-[11px]" style={{ color: "var(--brand-muted)" }}>{u.email}</div>

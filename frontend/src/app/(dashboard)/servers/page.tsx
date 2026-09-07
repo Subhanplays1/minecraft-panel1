@@ -54,7 +54,7 @@ export default function ServersPage() {
             {servers.length} server{servers.length !== 1 ? "s" : ""} &middot; {running} running
           </p>
         </div>
-        <button onClick={() => router.push("/servers/new")} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))" }}>
+        <button onClick={() => router.push("/servers/new")} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity" style={{ backgroundColor: "var(--brand-text)", color: "var(--brand-background)" }}>
           <Plus size={16} /> Create Server
         </button>
       </div>
@@ -82,7 +82,7 @@ export default function ServersPage() {
           </div>
           <p className="text-base font-semibold mb-1" style={{ color: "var(--brand-text)" }}>No servers found</p>
           <p className="text-sm mb-5" style={{ color: "var(--brand-muted)" }}>Create your first Minecraft server to get started</p>
-          <button onClick={() => router.push("/servers/new")} className="px-5 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))" }}>
+          <button onClick={() => router.push("/servers/new")} className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity" style={{ backgroundColor: "var(--brand-text)", color: "var(--brand-background)" }}>
             <Plus size={14} className="inline mr-2 -mt-0.5" /> Create Server
           </button>
         </div>

@@ -7,7 +7,8 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, Server, Users, Network, Settings, LogOut, ChevronLeft, ChevronRight,
   Bell, Search, Terminal, FileText, Link2, UserPlus, Puzzle, Archive, Wifi,
-  User, Activity, HelpCircle, Sliders, FolderOpen, ArrowLeft, X, Check, AlertTriangle, Info
+  User, Activity, HelpCircle, Sliders, FolderOpen, ArrowLeft, X, Check, AlertTriangle, Info,
+  Moon, Sun
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -20,7 +21,7 @@ interface ServerInfo { id: string; name: string; status: string; software: strin
 interface Notif { id: string; title: string; message: string; type: string; read: boolean; createdAt: string }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { settings } = useBranding();
+  const { settings, theme, toggleTheme } = useBranding();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -216,6 +217,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <input type="text" placeholder="Search..." className="pl-9 pr-3 py-1.5 rounded-lg text-xs w-56 focus:outline-none focus:ring-1" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)", color: "var(--brand-text)" }} />
           </div>
           <div className="flex items-center gap-2 relative">
+            <button onClick={toggleTheme} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "var(--brand-muted)" }}>
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
             <button onClick={() => setShowNotif(!showNotif)} className="p-1.5 rounded-lg hover:bg-white/5 relative" style={{ color: "var(--brand-muted)" }}>
               <Bell size={16} />
               {unread > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-bold" style={{ backgroundColor: "var(--brand-danger)", color: "white" }}>{unread}</span>}
