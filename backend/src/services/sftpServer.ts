@@ -2,6 +2,7 @@ import { Server, utils } from "ssh2";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { prisma } from "../utils/prisma";
 
 const SFTP_PORT = parseInt(process.env.SFTP_PORT || "2022");
@@ -45,30 +46,27 @@ export function startSftpServer() {
 
       client.on("authentication", (ctx: any) => {
         if (ctx.method === "password") {
-          (async () => {
-            try {
-              const user = await prisma.user.findFirst({
-                where: { email: ctx.username, banned: false },
-              });
-              if (!user || !user.password) {
-                ctx.reject(["password"]);
-                return;
-              }
-              const bcrypt = await import("bcryptjs");
-              const valid = await bcrypt.compare(ctx.password, user.password);
-              if (!valid) {
-                ctx.reject(["password"]);
-                return;
-              }
-              authenticatedUserId = user.id;
-              authenticatedEmail = user.email;
-              chrootDir = path.resolve(process.env.SERVERS_DIR || path.join(__dirname, "../../servers"));
-              if (!fs.existsSync(chrootDir)) fs.mkdirSync(chrootDir, { recursive: true });
-              ctx.accept();
-            } catch {
+          prisma.user.findFirst({
+            where: { email: ctx.username, banned: false },
+          }).then((user) => {
+            if (!user || !user.password) {
               ctx.reject(["password"]);
+              return;
             }
-          })();
+            const valid = bcrypt.compareSync(ctx.password, user.password);
+            if (!valid) {
+              ctx.reject(["password"]);
+              return;
+            }
+            authenticatedUserId = user.id;
+            authenticatedEmail = user.email;
+            chrootDir = path.resolve(process.env.SERVERS_DIR || path.join(__dirname, "../../servers"));
+            if (!fs.existsSync(chrootDir)) fs.mkdirSync(chrootDir, { recursive: true });
+            ctx.accept();
+          }).catch((err) => {
+            console.error("SFTP auth error:", err);
+            ctx.reject(["password"]);
+          });
         } else {
           ctx.reject(["password"]);
         }
@@ -89,31 +87,40 @@ export function startSftpServer() {
             sftpStream.on("OPEN", (reqid: number, filePath: string, flags: any, _attrs: any) => {
               const realPath = normalizePath(rootDir, filePath);
               const flagsNum = typeof flags === "number" ? flags : 0;
-              const isRead = (flagsNum & 4) !== 0 || flagsNum === 0;
-              const isWrite = (flagsNum & 2) !== 0 || (flagsNum & 8) !== 0 || (flagsNum & 4) !== 0;
-              const isCreate = (flagsNum & 16) !== 0 || (flagsNum & 64) !== 0;
-              const isTruncate = (flagsNum & 512) !== 0;
+
+              // Convert SFTP flags to Node.js fs flags
+              let nodeFlags = "r";
+              if (flagsNum === 0 || flagsNum === 4) nodeFlags = "r";
+              else if (flagsNum === 1 || flagsNum === 2 || flagsNum === 3) nodeFlags = "r+";
+              else if (flagsNum === 8 || flagsNum === 24 || flagsNum === 26) nodeFlags = "w";
+              else if (flagsNum === 16 || flagsNum === 17 || flagsNum === 20 || flagsNum === 21) nodeFlags = "w";
+              else if (flagsNum === 32 || flagsNum === 33) nodeFlags = "a";
+              else if (flagsNum === 64 || flagsNum === 65 || flagsNum === 66 || flagsNum === 67) nodeFlags = "w";
+              else if (flagsNum & 1) nodeFlags = "r+";
+              else nodeFlags = "w";
 
               try {
-                if (isCreate) {
-                  if (!fs.existsSync(realPath)) {
-                    fs.writeFileSync(realPath, "");
-                  } else if (isTruncate) {
-                    fs.writeFileSync(realPath, "");
-                  }
+                if (!fs.existsSync(realPath) && (nodeFlags === "w" || nodeFlags.includes("w"))) {
+                  fs.mkdirSync(path.dirname(realPath), { recursive: true });
                 }
-                const fd = fs.openSync(realPath, flagsNum);
+                const fd = fs.openSync(realPath, nodeFlags);
                 const handle = nextHandle++;
-                openFiles.set(handle, { fd, read: isRead, write: isWrite });
-                sftpStream.status(reqid, 0);
-                sftpStream.handle(reqid, handle);
-              } catch {
+                openFiles.set(handle, { fd, read: true, write: true });
+                sftpStream.handle(reqid, Buffer.from(String(handle), "utf-8"));
+              } catch (err) {
+                console.error("OPEN error:", filePath, nodeFlags, (err as Error).message);
                 sftpStream.status(reqid, 2);
               }
             });
 
+            function parseHandle(handle: any): number {
+              if (typeof handle === "number") return handle;
+              if (Buffer.isBuffer(handle)) return parseInt(handle.toString("utf-8"), 10);
+              return parseInt(String(handle), 10);
+            }
+
             sftpStream.on("READ", (reqid: number, handle: any, offset: number, length: number) => {
-              const file = openFiles.get(typeof handle === "number" ? handle : parseInt(String(handle)));
+              const file = openFiles.get(parseHandle(handle));
               if (!file) { sftpStream.status(reqid, 2); return; }
               try {
                 const buf = Buffer.alloc(length);
@@ -129,18 +136,20 @@ export function startSftpServer() {
             });
 
             sftpStream.on("WRITE", (reqid: number, handle: any, offset: number, data: Buffer) => {
-              const file = openFiles.get(typeof handle === "number" ? handle : parseInt(String(handle)));
+              const file = openFiles.get(parseHandle(handle));
               if (!file) { sftpStream.status(reqid, 2); return; }
               try {
-                fs.writeSync(file.fd, data, 0, data.length, offset);
+                const buf = Buffer.from(data);
+                fs.writeSync(file.fd, buf, 0, buf.length, offset);
                 sftpStream.status(reqid, 0);
-              } catch {
+              } catch (err) {
+                console.error("WRITE error:", (err as Error).message);
                 sftpStream.status(reqid, 2);
               }
             });
 
             sftpStream.on("CLOSE", (reqid: number, handle: any) => {
-              const numHandle = typeof handle === "number" ? handle : parseInt(String(handle));
+              const numHandle = parseHandle(handle);
               const file = openFiles.get(numHandle);
               if (file) {
                 try { fs.closeSync(file.fd); } catch {}
@@ -155,15 +164,15 @@ export function startSftpServer() {
                 const entries = fs.readdirSync(realPath, { withFileTypes: true });
                 const handle = nextHandle++;
                 openFiles.set(handle, { fd: -1, read: false, write: false, entries: entries as any, dirPath: realPath });
-                sftpStream.status(reqid, 0);
-                sftpStream.handle(reqid, handle);
-              } catch {
+                sftpStream.handle(reqid, Buffer.from(String(handle), "utf-8"));
+              } catch (err) {
+                console.error("OPENDIR error:", dirPath, (err as Error).message);
                 sftpStream.status(reqid, 2);
               }
             });
 
             sftpStream.on("READDIR", (reqid: number, handle: any) => {
-              const numHandle = typeof handle === "number" ? handle : parseInt(String(handle));
+              const numHandle = parseHandle(handle);
               const file = openFiles.get(numHandle);
               if (!file || !file.entries) { sftpStream.status(reqid, 1); return; }
               const entries = file.entries;
@@ -288,8 +297,12 @@ export function startSftpServer() {
 
             sftpStream.on("REALPATH", (reqid: number, filePath: string) => {
               const realPath = normalizePath(rootDir, filePath);
-              const displayPath = realPath.replace(rootDir, "") || "/";
-              sftpStream.name(reqid, [{ filename: displayPath, longname: displayPath, attrs: {} }]);
+              const displayPath = realPath === rootDir ? "/" : realPath.replace(rootDir, "").replace(/\\/g, "/");
+              sftpStream.name(reqid, [{
+                filename: displayPath || "/",
+                longname: `d rwxr-xr-x 1 root root 0 Jan 01 00:00 ${displayPath || "/"}`,
+                attrs: { mode: 16877, size: 0, uid: 0, gid: 0, atime: Math.floor(Date.now() / 1000), mtime: Math.floor(Date.now() / 1000) },
+              }]);
             });
           });
         });
