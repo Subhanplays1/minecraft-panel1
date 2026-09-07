@@ -19,7 +19,7 @@ interface UserData {
   lastLoginAt: string | null;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE = "";
 
 const ROLE_STYLES: Record<string, { bg: string; text: string }> = {
   ADMIN: { bg: "color-mix(in srgb, var(--brand-primary) 20%, transparent)", text: "var(--brand-primary)" },
@@ -55,7 +55,7 @@ export default function AdminUsersPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/servers/admin/users`, {
+      const res = await fetch(`${API_BASE}/api/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch users");
@@ -76,22 +76,15 @@ export default function AdminUsersPage() {
     if (!token) return;
     setActionLoading(userId);
     try {
-      const endpoint = currentStatus === "BANNED"
-        ? `${API_BASE}/api/servers/admin/users/${userId}/unban`
-        : `${API_BASE}/api/servers/admin/users/${userId}/ban`;
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+      const isBanned = currentStatus !== "BANNED";
+      const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ banned: isBanned }),
       });
       if (!res.ok) throw new Error("Action failed");
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId
-            ? { ...u, status: currentStatus === "BANNED" ? "ACTIVE" : "BANNED" }
-            : u
-        )
-      );
-      toast.success(currentStatus === "BANNED" ? "User unbanned" : "User banned");
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, banned: isBanned } : u));
+      toast.success(isBanned ? "User banned" : "User unbanned");
     } catch {
       toast.error("Action failed");
     } finally {
@@ -103,18 +96,13 @@ export default function AdminUsersPage() {
     if (!token) return;
     setActionLoading(userId);
     try {
-      const res = await fetch(`${API_BASE}/api/servers/admin/users/${userId}/role`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),
       });
       if (!res.ok) throw new Error("Role change failed");
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: newRole as UserData["role"] } : u))
-      );
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole as UserData["role"] } : u));
       toast.success("Role updated");
     } catch {
       toast.error("Failed to update role");

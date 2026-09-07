@@ -1,14 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Activity, Server, Play, Square, Settings, User, Clock, Loader2 } from "lucide-react"
+import { Activity, Server, Play, Square, Clock, Loader2 } from "lucide-react"
 
-interface LogEntry {
-  id: string
-  action: string
-  details: string
-  timestamp: string
-}
+interface LogEntry { id: string; action: string; details: string; timestamp: string }
 
 export default function ActivityPage() {
   const [logs, setLogs] = useState<LogEntry[]>([])
@@ -32,44 +27,40 @@ export default function ActivityPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const getIcon = (action: string) => {
-    if (action.includes("Online")) return <Play className="w-4 h-4 text-green-400" />
-    if (action.includes("Offline")) return <Square className="w-4 h-4 text-red-400" />
-    if (action.includes("Settings")) return <Settings className="w-4 h-4 text-blue-400" />
-    return <Server className="w-4 h-4" style={{ color: "var(--brand-primary)" }} />
-  }
-
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6 animate-fade-in">
-        <h1 className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>Activity Log</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--brand-muted)" }}>Recent server activity</p>
+    <div className="p-5 md:p-6 max-w-[800px] mx-auto">
+      <div className="mb-5">
+        <h1 className="text-[17px] font-semibold" style={{ color: "var(--brand-text)" }}>Activity</h1>
+        <p className="text-[12px] mt-0.5" style={{ color: "var(--brand-muted)" }}>Recent server activity</p>
       </div>
 
-      <div className="rounded-xl overflow-hidden animate-fade-in-up" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
+      <div className="rounded-xl" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
         {loading ? (
-          <div className="p-10 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--brand-primary)" }} /></div>
+          <div className="p-8 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--brand-muted)" }} strokeWidth={1.5} />
+          </div>
         ) : logs.length === 0 ? (
-          <div className="p-10 text-center" style={{ color: "var(--brand-muted)" }}>
-            <Activity className="w-12 h-12 mx-auto mb-3 opacity-20" />
-            <p>No activity yet</p>
+          <div className="p-8 text-center">
+            <Activity className="w-6 h-6 mx-auto mb-2" style={{ color: "var(--brand-muted)", opacity: 0.3 }} strokeWidth={1.5} />
+            <p className="text-[12px]" style={{ color: "var(--brand-muted)" }}>No activity yet</p>
           </div>
         ) : (
-          logs.map((log, i) => (
-            <div key={log.id} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors" style={{ borderBottom: i < logs.length - 1 ? "1px solid var(--brand-border)" : undefined }}>
-              <div className="p-2 rounded-lg" style={{ backgroundColor: "rgba(124,58,237,0.12)" }}>
-                {getIcon(log.action)}
+          <div>
+            {logs.map((log, i) => (
+              <div key={log.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors" style={{ borderBottom: i < logs.length - 1 ? "1px solid var(--brand-border)" : undefined }}>
+                <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#1a1a1a", border: "1px solid #222" }}>
+                  {log.action.includes("Online") ? <Play size={12} strokeWidth={1.5} style={{ color: "#888" }} /> : <Square size={12} strokeWidth={1.5} style={{ color: "#888" }} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-medium" style={{ color: "var(--brand-text)" }}>{log.action}</div>
+                  <div className="text-[11px]" style={{ color: "var(--brand-muted)" }}>{log.details}</div>
+                </div>
+                <div className="text-[10px] flex-shrink-0" style={{ color: "var(--brand-muted)" }}>
+                  {new Date(log.timestamp).toLocaleString()}
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>{log.action}</div>
-                <div className="text-xs" style={{ color: "var(--brand-muted)" }}>{log.details}</div>
-              </div>
-              <div className="flex items-center gap-1 text-xs" style={{ color: "var(--brand-muted)" }}>
-                <Clock className="w-3 h-3" />
-                {new Date(log.timestamp).toLocaleString()}
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
     </div>

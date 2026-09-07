@@ -16,15 +16,15 @@
   --brand-warning: #999999;
   --brand-danger: #666666;
   --brand-info: #CCCCCC;
-  --font-heading: "Inter", system-ui, -apple-system, sans-serif;
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
-  --font-code: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+  --font-heading: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-code: var(--font-jetbrains), "SF Mono", "Fira Code", monospace;
   --brand-radius: 10px;
 }
 
 @layer base {
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+  html { font-family: var(--font-body); }
   body { font-family: var(--font-body); background-color: var(--brand-background); color: var(--brand-text); transition: background-color 0.2s ease, color 0.2s ease; }
 }
 
@@ -73,6 +73,13 @@
 }
 .sidebar-item.active {
   background-color: rgba(255,255,255,0.08);
+}
+
+/* Main content margin for sidebar */
+@media (min-width: 1024px) {
+  .main-with-sidebar {
+    margin-left: var(--sidebar-width, 220px);
+  }
 }
 
 /* Skeleton */

@@ -1,8 +1,21 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { BrandingProvider } from "@/components/BrandingProvider";
 import { AdBlockerProvider } from "@/components/AdBanner";
 import { Toaster } from "react-hot-toast";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Minevo — Minecraft Server Hosting",
@@ -11,14 +24,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXX" crossOrigin="anonymous" />
-      </head>
-      <body className="min-h-screen antialiased" style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
+    <html lang="en" className={`dark ${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+      <body className="min-h-screen antialiased" style={{ fontFamily: "var(--font-inter), system-ui, -apple-system, sans-serif" }}>
         <BrandingProvider>
           <AdBlockerProvider>
             {children}
@@ -31,7 +38,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   border: "1px solid var(--brand-border)",
                   borderRadius: "8px",
                   fontSize: "12px",
-                  fontFamily: "Inter, system-ui, sans-serif",
                 },
               }}
             />
