@@ -447,7 +447,7 @@ router.get("/servers/:id/file", authenticate, async (req: Request, res: Response
 router.post("/servers/:id/install-plugin", authenticate, async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
-    const { slug, name, owner } = req.body;
+    const { slug, name, owner, source } = req.body;
     const server = await prisma.server.findUnique({ where: { id } });
     if (!server) return res.status(404).json({ error: "Server not found" });
 
@@ -455,7 +455,46 @@ router.post("/servers/:id/install-plugin", authenticate, async (req: Request, re
     const pluginsDir = path.join(serverDir, "plugins");
     if (!fs.existsSync(pluginsDir)) fs.mkdirSync(pluginsDir, { recursive: true });
 
-    // Try to download the plugin JAR from Hangar
+    // Modrinth install
+    if (source === "modrinth") {
+      try {
+        const projectRes = await fetch(`https://api.modrinth.com/v2/project/${slug}`);
+        if (!projectRes.ok) return res.status(404).json({ error: "Plugin not found on Modrinth" });
+        const project: any = await projectRes.json();
+
+        const loaders = server.software === "paper" ? ["paper"] :
+                       server.software === "spigot" ? ["spigot"] :
+                       server.software === "purpur" ? ["purpur"] :
+                       ["paper", "spigot", "bukkit"];
+
+        const versionParams = new URLSearchParams({
+          loaders: JSON.stringify(loaders),
+          game_versions: JSON.stringify([server.mcVersion]),
+          limit: "1",
+        });
+        const versionRes = await fetch(`https://api.modrinth.com/v2/project/${slug}/version?${versionParams}`);
+        if (!versionRes.ok) return res.status(404).json({ error: "No compatible version found" });
+        const versions: any = await versionRes.json();
+        if (versions.length === 0) return res.status(404).json({ error: "No compatible version found for your server" });
+
+        const version = versions[0];
+        const file = version.files.find((f: any) => f.primary) || version.files[0];
+        if (!file || !file.url) return res.status(404).json({ error: "No download URL found" });
+
+        const jarRes = await fetch(file.url);
+        if (!jarRes.ok) return res.status(500).json({ error: "Failed to download plugin" });
+        const buffer = Buffer.from(await jarRes.arrayBuffer());
+        const fileName = file.filename || `${slug}.jar`;
+        fs.writeFileSync(path.join(pluginsDir, fileName), buffer);
+
+        return res.json({ success: true, message: `Installed ${name || slug}` });
+      } catch (dlErr: any) {
+        console.error("Modrinth plugin install error:", dlErr);
+        return res.status(500).json({ error: "Failed to install plugin" });
+      }
+    }
+
+    // Hangar install (default)
     try {
       const hangarUrl = owner ? `https://hangar.papermc.io/api/v1/projects/${owner}/${slug}/versions?limit=1` : `https://hangar.papermc.io/api/v1/projects/${slug}/versions?limit=1`;
       const hangarRes = await fetch(hangarUrl);

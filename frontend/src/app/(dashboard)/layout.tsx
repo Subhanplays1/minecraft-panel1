@@ -6,7 +6,7 @@ import type { PublicSettings } from "@/lib/api";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, Server, Users, Network, Settings, LogOut, ChevronLeft, ChevronRight,
-  Bell, Search, Terminal, FileText, Link2, UserPlus, Puzzle, Archive, Wifi,
+  Bell, Search, Terminal, FileText, Link2, UserPlus, Puzzle, Archive,
   User, Activity, HelpCircle, Sliders, FolderOpen, ArrowLeft, X,
   Moon, Sun, Loader2
 } from "lucide-react";
@@ -95,7 +95,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { id: "backups", name: "Backups", icon: <Archive size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/backups` },
     { id: "users", name: "Users", icon: <UserPlus size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/users` },
     { id: "sftp", name: "SFTP", icon: <Link2 size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/sftp` },
-    { id: "tunnel", name: "Playit", icon: <Wifi size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/tunnel` },
     { id: "settings", name: "Settings", icon: <Settings size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/settings` },
   ];
 
