@@ -5,15 +5,11 @@ import { AdBlockerProvider } from "@/components/AdBanner";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "Minecraft Panel",
-  description: "Minecraft Server Management Panel",
+  title: "Minevo - Minecraft Server Hosting",
+  description: "Free Minecraft Server Hosting - Manage your servers with Minevo",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
       <head>
@@ -23,16 +19,7 @@ export default function RootLayout({
         <BrandingProvider>
           <AdBlockerProvider>
             {children}
-            <Toaster
-              position="bottom-right"
-              toastOptions={{
-                style: {
-                  background: "var(--brand-card)",
-                  color: "var(--brand-text)",
-                  border: "1px solid var(--brand-border)",
-                },
-              }}
-            />
+            <Toaster position="bottom-right" toastOptions={{ style: { background: "var(--brand-card)", color: "var(--brand-text)", border: "1px solid var(--brand-border)", borderRadius: "10px" } }} />
           </AdBlockerProvider>
         </BrandingProvider>
       </body>

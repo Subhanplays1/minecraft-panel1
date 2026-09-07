@@ -4,6 +4,7 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import compression from "compression";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import bcrypt from "bcryptjs";
@@ -19,6 +20,9 @@ import { handleUploadError } from "./services/upload";
 const app = express();
 const PORT = parseInt(process.env.PORT || "3001");
 
+// Performance: compression
+app.use(compression());
+
 // Security
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
@@ -29,7 +33,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,
@@ -38,16 +42,16 @@ app.use("/api/auth/login", limiter);
 app.use("/api/auth/register", limiter);
 
 // Body parsing
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
-// Static uploads
-app.use("/uploads", express.static(path.resolve(process.env.UPLOAD_DIR || "./uploads")));
+// Static uploads with cache
+app.use("/uploads", express.static(path.resolve(process.env.UPLOAD_DIR || "./uploads"), { maxAge: "1h" }));
 
-// Static server files
+// Static server files with cache
 const serversDir = process.env.SERVERS_DIR || path.resolve(__dirname, "../servers");
 if (!existsSync(serversDir)) mkdirSync(serversDir, { recursive: true });
-app.use("/servers", express.static(serversDir));
+app.use("/servers", express.static(serversDir, { maxAge: "1h" }));
 
 // Routes
 app.use("/api/auth", authRoutes);

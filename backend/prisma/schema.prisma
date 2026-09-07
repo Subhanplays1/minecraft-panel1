@@ -118,13 +118,13 @@ model BrandingSettings {
   tenantId       String   @default("default")
 
   // Basic Branding
-  panelName      String   @default("Minecraft Panel")
-  companyName    String   @default("")
-  shortName      String   @default("")
-  tagline        String   @default("")
-  description    String   @default("")
-  copyrightText  String   @default("")
-  supportName    String   @default("")
+  panelName      String   @default("Minevo")
+  companyName    String   @default("Minevo")
+  shortName      String   @default("Minevo")
+  tagline        String   @default("Free Minecraft Server Hosting")
+  description    String   @default("Free Minecraft Server Hosting - Create and manage your servers")
+  copyrightText  String   @default("Minevo 2025")
+  supportName    String   @default("Minevo Support")
   supportUrl     String   @default("")
   websiteUrl     String   @default("")
   statusPageUrl  String   @default("")
@@ -138,15 +138,15 @@ model BrandingSettings {
   emailLogo      String?
 
   // Colors
-  primaryColor   String   @default("#7C3AED")
-  secondaryColor String   @default("#6D28D9")
-  accentColor    String   @default("#A855F7")
-  backgroundColor String  @default("#09090B")
-  sidebarColor   String   @default("#0A0A0C")
-  cardColor      String   @default("#18181B")
-  borderColor    String   @default("#27272A")
-  textColor      String   @default("#FAFAFA")
-  mutedTextColor String   @default("#A1A1AA")
+  primaryColor   String   @default("#6366F1")
+  secondaryColor String   @default("#4F46E5")
+  accentColor    String   @default("#818CF8")
+  backgroundColor String  @default("#0F1117")
+  sidebarColor   String   @default("#111318")
+  cardColor      String   @default("#1A1D27")
+  borderColor    String   @default("#2A2D3A")
+  textColor      String   @default("#F1F5F9")
+  mutedTextColor String   @default("#8B92A5")
   successColor   String   @default("#22C55E")
   warningColor   String   @default("#EAB308")
   dangerColor    String   @default("#EF4444")
@@ -158,8 +158,8 @@ model BrandingSettings {
 
   // Background
   bgType         String   @default("solid")
-  bgColor1       String   @default("#09090B")
-  bgColor2       String   @default("#18181B")
+  bgColor1       String   @default("#0F1117")
+  bgColor2       String   @default("#1A1D27")
   bgDirection    String   @default("to bottom right")
   bgImage        String?
   bgOpacity      Float    @default(1.0)
