@@ -226,7 +226,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main */}
       <main className="flex-1 min-h-screen transition-all duration-200 main-with-sidebar" style={{ "--sidebar-width": sw } as React.CSSProperties}>
         {/* Top bar */}
-        <header className="h-12 flex items-center justify-between px-4 sticky top-0 z-30" style={{ backgroundColor: "color-mix(in srgb, var(--brand-background) 80%, transparent)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--brand-border)" }}>
+        <header className="h-12 flex items-center justify-between px-4 sticky top-0 z-[60]" style={{ backgroundColor: "color-mix(in srgb, var(--brand-background) 80%, transparent)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--brand-border)" }}>
           {/* Mobile menu */}
           <button onClick={() => setShowMobile(true)} className="p-1.5 rounded-md lg:hidden" style={{ color: "var(--brand-muted)" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>

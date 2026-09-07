@@ -1,12 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { branding as brandingApi, type PublicSettings } from "@/lib/api";
 
 interface BrandingContextType {
   settings: PublicSettings | null;
   loading: boolean;
-  refresh: () => Promise<void>;
+  refresh: () => void;
   theme: "dark" | "light";
   toggleTheme: () => void;
 }
@@ -14,7 +14,7 @@ interface BrandingContextType {
 const BrandingContext = createContext<BrandingContextType>({
   settings: null,
   loading: true,
-  refresh: async () => {},
+  refresh: () => {},
   theme: "dark",
   toggleTheme: () => {},
 });
@@ -62,25 +62,25 @@ function applyThemeVars(theme: "dark" | "light", branding?: PublicSettings["bran
   }
 
   if (branding) {
-    root.style.setProperty("--brand-primary", branding.primaryColor);
-    root.style.setProperty("--brand-secondary", branding.secondaryColor);
-    root.style.setProperty("--brand-accent", branding.accentColor);
-    root.style.setProperty("--brand-background", branding.backgroundColor);
-    root.style.setProperty("--brand-sidebar", branding.sidebarColor);
-    root.style.setProperty("--brand-card", branding.cardColor);
-    root.style.setProperty("--brand-border", branding.borderColor);
-    root.style.setProperty("--brand-text", branding.textColor);
-    root.style.setProperty("--brand-muted", branding.mutedTextColor);
-    root.style.setProperty("--brand-success", branding.successColor);
-    root.style.setProperty("--brand-warning", branding.warningColor);
-    root.style.setProperty("--brand-danger", branding.dangerColor);
-    root.style.setProperty("--brand-info", branding.infoColor);
-    root.style.setProperty("--font-heading", branding.headingFont);
-    root.style.setProperty("--font-body", branding.bodyFont);
-    root.style.setProperty("--font-code", branding.codeFont);
+    if (branding.primaryColor) root.style.setProperty("--brand-primary", branding.primaryColor);
+    if (branding.secondaryColor) root.style.setProperty("--brand-secondary", branding.secondaryColor);
+    if (branding.accentColor) root.style.setProperty("--brand-accent", branding.accentColor);
+    if (branding.backgroundColor) root.style.setProperty("--brand-background", branding.backgroundColor);
+    if (branding.sidebarColor) root.style.setProperty("--brand-sidebar", branding.sidebarColor);
+    if (branding.cardColor) root.style.setProperty("--brand-card", branding.cardColor);
+    if (branding.borderColor) root.style.setProperty("--brand-border", branding.borderColor);
+    if (branding.textColor) root.style.setProperty("--brand-text", branding.textColor);
+    if (branding.mutedTextColor) root.style.setProperty("--brand-muted", branding.mutedTextColor);
+    if (branding.successColor) root.style.setProperty("--brand-success", branding.successColor);
+    if (branding.warningColor) root.style.setProperty("--brand-warning", branding.warningColor);
+    if (branding.dangerColor) root.style.setProperty("--brand-danger", branding.dangerColor);
+    if (branding.infoColor) root.style.setProperty("--brand-info", branding.infoColor);
+    if (branding.headingFont) root.style.setProperty("--font-heading", branding.headingFont);
+    if (branding.bodyFont) root.style.setProperty("--font-body", branding.bodyFont);
+    if (branding.codeFont) root.style.setProperty("--font-code", branding.codeFont);
 
-    if (branding.bgType === "solid") document.body.style.background = branding.bgColor1 || branding.backgroundColor;
-    else if (branding.bgType === "gradient") document.body.style.background = `linear-gradient(${branding.bgDirection || "to bottom right"}, ${branding.bgColor1 || "#080808"}, ${branding.bgColor2 || "#111111"})`;
+    if (branding.bgType === "solid" && branding.bgColor1) document.body.style.background = branding.bgColor1;
+    else if (branding.bgType === "gradient" && branding.bgColor1) document.body.style.background = `linear-gradient(${branding.bgDirection || "to bottom right"}, ${branding.bgColor1}, ${branding.bgColor2 || "#111111"})`;
     else if (branding.bgType === "image" && branding.bgImage) document.body.style.background = `url(/${branding.bgImage}) center / ${branding.bgSize || "cover"} ${branding.bgRepeat || "no-repeat"}`;
     else document.body.style.background = theme === "dark" ? "#080808" : "#F5F5F5";
     document.body.style.backgroundAttachment = "fixed";
@@ -107,40 +107,55 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<PublicSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
+  const themeRef = useRef<"dark" | "light">("dark");
 
   useEffect(() => {
     const saved = localStorage.getItem("theme") as "dark" | "light" | null;
     const initial = saved || "dark";
     setThemeState(initial);
+    themeRef.current = initial;
     applyThemeVars(initial);
   }, []);
 
   const toggleTheme = useCallback(() => {
     setThemeState((prev) => {
       const next = prev === "dark" ? "light" : "dark";
+      themeRef.current = next;
       localStorage.setItem("theme", next);
-      applyThemeVars(next);
+      const root = document.documentElement;
+      root.setAttribute("data-theme", next);
+      const vars = next === "dark" ? darkTheme : lightTheme;
+      for (const [key, value] of Object.entries(vars)) {
+        root.style.setProperty(key, value);
+      }
+      document.body.style.background = next === "dark" ? "#080808" : "#F5F5F5";
+      document.body.style.backgroundAttachment = "fixed";
+      document.title = "Minevo — Minecraft Hosting";
       return next;
     });
   }, []);
 
-  const fetchSettings = useCallback(async () => {
-    try {
-      const data = await brandingApi.getPublic();
-      setSettings(data);
-    } catch {}
-    finally { setLoading(false); }
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await brandingApi.getPublic();
+        setSettings(data);
+        applyThemeVars(themeRef.current, data.branding);
+      } catch {
+        applyThemeVars(themeRef.current);
+      } finally { setLoading(false); }
+    })();
   }, []);
 
-  useEffect(() => { fetchSettings(); }, [fetchSettings]);
+  const refresh = useCallback(() => {
+    (async () => {
+      try {
+        const data = await brandingApi.getPublic();
+        setSettings(data);
+        applyThemeVars(themeRef.current, data.branding);
+      } catch {}
+    })();
+  }, []);
 
-  useEffect(() => {
-    if (settings?.branding) {
-      applyThemeVars(theme, settings.branding);
-    } else {
-      applyThemeVars(theme);
-    }
-  }, [theme, settings]);
-
-  return <BrandingContext.Provider value={{ settings, loading, refresh: fetchSettings, theme, toggleTheme }}>{children}</BrandingContext.Provider>;
+  return <BrandingContext.Provider value={{ settings, loading, refresh, theme, toggleTheme }}>{children}</BrandingContext.Provider>;
 }
