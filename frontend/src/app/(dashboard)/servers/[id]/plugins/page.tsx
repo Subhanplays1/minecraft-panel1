@@ -55,9 +55,7 @@ export default function ServerPluginsPage() {
         index: "relevance",
         facets: JSON.stringify(facets),
       })
-      const res = await fetch(`https://api.modrinth.com/v2/search?${params}`, {
-        headers: { "User-Agent": "Minevo-Panel/1.0" }
-      })
+      const res = await fetch(`/api/plugins/search/modrinth?${params}`)
       if (res.ok) {
         const data = await res.json()
         const results: Plugin[] = (data.hits || []).map((p: any) => ({
@@ -81,9 +79,7 @@ export default function ServerPluginsPage() {
   const searchHangar = async (q: string) => {
     setLoading(true)
     try {
-      const res = await fetch(`https://hangar.papermc.io/api/v1/projects?q=${encodeURIComponent(q)}&limit=20`, {
-        headers: { "User-Agent": "Minevo-Panel/1.0" }
-      })
+      const res = await fetch(`/api/plugins/search/hangar?q=${encodeURIComponent(q)}&limit=20`)
       if (res.ok) {
         const data = await res.json()
         const results: Plugin[] = (data.result || []).map((p: any) => ({

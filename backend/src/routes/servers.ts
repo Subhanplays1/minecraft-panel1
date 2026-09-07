@@ -441,6 +441,46 @@ router.get("/servers/:id/file", authenticate, async (req: Request, res: Response
 });
 
 // ============================================================
+// PLUGIN SEARCH PROXY
+// ============================================================
+
+const UA = { "User-Agent": "Minevo-Panel/1.0" };
+
+router.get("/plugins/search/modrinth", async (req: Request, res: Response) => {
+  try {
+    const { query, limit, facets, index } = req.query;
+    const params = new URLSearchParams();
+    if (query) params.set("query", String(query));
+    if (limit) params.set("limit", String(limit));
+    if (index) params.set("index", String(index));
+    if (facets) params.set("facets", String(facets));
+    const r = await fetch(`https://api.modrinth.com/v2/search?${params}`, { headers: UA });
+    if (!r.ok) return res.status(r.status).json({ error: "Modrinth API error" });
+    const data = await r.json();
+    res.json(data);
+  } catch (err: any) {
+    console.error("Modrinth search proxy error:", err);
+    res.status(500).json({ error: "Failed to search Modrinth" });
+  }
+});
+
+router.get("/plugins/search/hangar", async (req: Request, res: Response) => {
+  try {
+    const { q, limit } = req.query;
+    const params = new URLSearchParams();
+    if (q) params.set("q", String(q));
+    if (limit) params.set("limit", String(limit));
+    const r = await fetch(`https://hangar.papermc.io/api/v1/projects?${params}`, { headers: UA });
+    if (!r.ok) return res.status(r.status).json({ error: "Hangar API error" });
+    const data = await r.json();
+    res.json(data);
+  } catch (err: any) {
+    console.error("Hangar search proxy error:", err);
+    res.status(500).json({ error: "Failed to search Hangar" });
+  }
+});
+
+// ============================================================
 // PLUGIN INSTALL
 // ============================================================
 
