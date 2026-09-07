@@ -227,7 +227,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main */}
-      <main className="flex-1 min-h-screen transition-all duration-200 lg:main-with-sidebar" style={{ "--sidebar-width": sw } as React.CSSProperties}>
+      <main className="flex-1 min-h-screen transition-all duration-200 main-with-sidebar" style={{ "--sidebar-width": sw } as React.CSSProperties}>
         {/* Top bar */}
         <header className="h-12 flex items-center justify-between px-4 sticky top-0 z-30" style={{ backgroundColor: "color-mix(in srgb, var(--brand-background) 80%, transparent)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--brand-border)" }}>
           {/* Mobile menu */}

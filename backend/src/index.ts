@@ -184,31 +184,36 @@ async function seedDefaults() {
       await prisma.authBranding.create({ data: { tenantId: "default" } });
     }
 
-    // Force-reset navigation to correct items (removes old Store/Files/Plugins/Backups)
-    const allowedNavUrls = ["/dashboard", "/servers", "/profile", "/activity", "/support", "/admin/users", "/admin/nodes", "/admin/limits", "/admin/settings"];
+    // Force-reset navigation to correct items
+    const defaultNav = [
+      { name: "Dashboard", icon: "LayoutDashboard", url: "/dashboard", section: "main", sortOrder: 0 },
+      { name: "Servers", icon: "Server", url: "/servers", section: "main", sortOrder: 1 },
+      { name: "Profile", icon: "User", url: "/profile", section: "main", sortOrder: 2 },
+      { name: "Activity", icon: "Activity", url: "/activity", section: "main", sortOrder: 3 },
+      { name: "Support", icon: "HelpCircle", url: "/support", section: "main", sortOrder: 4 },
+      { name: "Users", icon: "Users", url: "/admin/users", section: "admin", sortOrder: 6 },
+      { name: "Nodes", icon: "Network", url: "/admin/nodes", section: "admin", sortOrder: 7 },
+      { name: "Resource Limits", icon: "Sliders", url: "/admin/limits", section: "admin", sortOrder: 8 },
+      { name: "Settings", icon: "Settings", url: "/admin/settings", section: "admin", sortOrder: 9 },
+    ];
+    const allowedNavUrls = defaultNav.map((n) => n.url);
+
+    // Delete old nav items not in allowed list
     const allNavItems = await prisma.navigationItem.findMany();
     for (const item of allNavItems) {
       if (!allowedNavUrls.includes(item.url)) {
         await prisma.navigationItem.delete({ where: { id: item.id } });
       }
     }
-    const navCount = await prisma.navigationItem.count();
-    if (navCount === 0) {
-      const defaultNav = [
-        { name: "Dashboard", icon: "LayoutDashboard", url: "/dashboard", section: "main", sortOrder: 0 },
-        { name: "Servers", icon: "Server", url: "/servers", section: "main", sortOrder: 1 },
-        { name: "Profile", icon: "User", url: "/profile", section: "main", sortOrder: 2 },
-        { name: "Activity", icon: "Activity", url: "/activity", section: "main", sortOrder: 3 },
-        { name: "Support", icon: "HelpCircle", url: "/support", section: "main", sortOrder: 4 },
-        { name: "Users", icon: "Users", url: "/admin/users", section: "admin", sortOrder: 6 },
-        { name: "Nodes", icon: "Network", url: "/admin/nodes", section: "admin", sortOrder: 7 },
-        { name: "Resource Limits", icon: "Sliders", url: "/admin/limits", section: "admin", sortOrder: 8 },
-        { name: "Settings", icon: "Settings", url: "/admin/settings", section: "admin", sortOrder: 9 },
-      ];
-      for (const item of defaultNav) {
+
+    // Ensure all required nav items exist
+    for (const navItem of defaultNav) {
+      const existing = await prisma.navigationItem.findFirst({ where: { url: navItem.url, tenantId: "default" } });
+      if (!existing) {
         await prisma.navigationItem.create({
-          data: { ...item, tenantId: "default", isCustom: false, isVisible: true, openNewTab: false },
+          data: { ...navItem, tenantId: "default", isCustom: false, isVisible: true, openNewTab: false },
         });
+        console.log(`Created missing nav item: ${navItem.name}`);
       }
     }
 
