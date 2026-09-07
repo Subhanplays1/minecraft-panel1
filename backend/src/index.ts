@@ -16,6 +16,7 @@ import authRoutes from "./routes/auth";
 import brandingRoutes from "./routes/branding";
 import serverRoutes from "./routes/servers";
 import { handleUploadError } from "./services/upload";
+import { stopLocalServer, isRunning } from "./services/processManager";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3001");
@@ -75,6 +76,40 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: "Internal server error" });
 });
 
+// Graceful shutdown - stop all running servers
+async function gracefulShutdown(signal: string) {
+  console.log(`\n[Panel] Received ${signal}. Stopping all running servers...`);
+  try {
+    const runningServers = await prisma.server.findMany({ where: { status: "RUNNING" } });
+    for (const server of runningServers) {
+      try {
+        if (isRunning(server.id)) {
+          stopLocalServer(server.id);
+          console.log(`[Panel] Stopped server: ${server.name}`);
+        }
+      } catch (e: any) {
+        console.error(`[Panel] Failed to stop ${server.name}: ${e.message}`);
+      }
+    }
+    // Mark all as STOPPED in DB
+    await prisma.server.updateMany({ where: { status: "RUNNING" }, data: { status: "STOPPED" } });
+    console.log("[Panel] All servers stopped.");
+  } catch (e: any) {
+    console.error("[Panel] Shutdown error:", e.message);
+  }
+  await prisma.$disconnect();
+  process.exit(0);
+}
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("exit", () => {
+  // Synchronous fallback - mark servers as stopped in DB
+  try {
+    execSync(`npx prisma db push --skip-generate`, { cwd: __dirname + "/..", stdio: "pipe" });
+  } catch {}
+});
+
 // Auto-setup database and start server
 async function main() {
   try {
@@ -94,6 +129,15 @@ async function main() {
 
     await prisma.$connect();
     console.log("Database connected");
+
+    // Reset all servers to STOPPED on startup (they were killed when backend died)
+    const resetResult = await prisma.server.updateMany({
+      where: { status: { in: ["RUNNING", "STARTING", "RESTARTING"] } },
+      data: { status: "STOPPED" },
+    });
+    if (resetResult.count > 0) {
+      console.log(`[Panel] Reset ${resetResult.count} server(s) to STOPPED (backend restarted)`);
+    }
 
     // Auto-seed default data
     await seedDefaults();
