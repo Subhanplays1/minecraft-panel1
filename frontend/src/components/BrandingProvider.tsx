@@ -119,10 +119,10 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     setThemeState((prev) => {
       const next = prev === "dark" ? "light" : "dark";
       localStorage.setItem("theme", next);
-      applyThemeVars(next, settings?.branding);
+      applyThemeVars(next);
       return next;
     });
-  }, [settings]);
+  }, []);
 
   const fetchSettings = useCallback(async () => {
     try {

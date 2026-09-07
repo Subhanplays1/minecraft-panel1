@@ -35,27 +35,24 @@ export function AdBlockerProvider({ children }: { children: React.ReactNode }) {
 
   if (blocked) {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ backgroundColor: "#0f0f0f" }}>
-        <div className="max-w-md w-full mx-4 p-8 rounded-2xl text-center" style={{ backgroundColor: "#1a1a2e", border: "1px solid #e74c3c" }}>
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(231,76,60,0.15)" }}>
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="#e74c3c" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ backgroundColor: "#080808" }}>
+        <div className="max-w-sm w-full mx-4 p-10 rounded-2xl text-center" style={{ backgroundColor: "#111111", border: "1px solid #1C1C1C" }}>
+          <div className="w-14 h-14 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1a1a1a", border: "1px solid #222" }}>
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="#FAFAFA" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Ad Blocker Detected</h2>
-          <p className="text-gray-400 text-sm mb-6">
-            This panel is supported by ads. Please disable your ad blocker to continue using the service for free.
+          <h2 className="text-base font-semibold mb-2" style={{ color: "#FAFAFA" }}>Ad Blocker Detected</h2>
+          <p className="text-[13px] leading-relaxed mb-8" style={{ color: "#666666" }}>
+            Please disable your ad blocker to support this free service.
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-2.5 rounded-lg text-sm font-medium transition-all"
-            style={{ backgroundColor: "#e74c3c", color: "white" }}
+            className="w-full py-2.5 rounded-lg text-[13px] font-medium transition-all hover:opacity-80"
+            style={{ backgroundColor: "#FAFAFA", color: "#080808" }}
           >
             Reload Page
           </button>
-          <p className="text-xs text-gray-500 mt-4">
-            We use non-intrusive ads to keep the service free.
-          </p>
         </div>
       </div>
     )

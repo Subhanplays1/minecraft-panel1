@@ -6,7 +6,7 @@ import type { PublicSettings } from "@/lib/api";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, Server, Users, Network, Settings, LogOut, ChevronLeft, ChevronRight,
-  Bell, Search, Terminal, FileText, Link2, UserPlus, Puzzle, Archive,
+  Bell, Terminal, FileText, Link2, UserPlus, Puzzle, Archive,
   User, Activity, HelpCircle, Sliders, FolderOpen, ArrowLeft, X,
   Moon, Sun, Loader2
 } from "lucide-react";
@@ -231,17 +231,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button onClick={() => setShowMobile(true)} className="p-1.5 rounded-md lg:hidden" style={{ color: "var(--brand-muted)" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
           </button>
-
-          {/* Search */}
-          <div className="relative hidden sm:block">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--brand-muted)" }} />
-            <input
-              type="text"
-              placeholder="Search servers, users, settings..."
-              className="input pl-9 pr-3 py-[7px] text-[12px]"
-              style={{ width: "320px" }}
-            />
-          </div>
 
           <div className="flex items-center gap-1.5">
             <button onClick={toggleTheme} className="p-1.5 rounded-md hover:bg-white/5 transition-colors" style={{ color: "var(--brand-muted)" }} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
