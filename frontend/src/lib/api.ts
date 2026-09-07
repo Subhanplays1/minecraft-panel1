@@ -233,10 +233,10 @@ export const servers = {
 
 // Admin
 export const admin = {
-  getUsers: (token?: string) => request<User[]>(`/api/servers/admin/users`, { token }),
+  getUsers: (token?: string) => request<User[]>(`/api/admin/users`, { token }),
   updateUser: (id: string, data: { role?: string; banned?: boolean; banReason?: string }, token?: string) =>
-    request(`/api/servers/admin/users/${id}`, { method: "PUT", body: data, token }),
-  getStats: (token?: string) => request<{ userCount: number; serverCount: number; runningServers: number; onlineServers: number }>(`/api/servers/admin/stats`, { token }),
+    request(`/api/admin/users/${id}`, { method: "PUT", body: data, token }),
+  getStats: (token?: string) => request<{ userCount: number; serverCount: number; runningServers: number; onlineServers: number }>(`/api/admin/stats`, { token }),
 };
 
 // Types

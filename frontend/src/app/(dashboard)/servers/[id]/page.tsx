@@ -46,9 +46,14 @@ export default function ServerConsolePage() {
     setActionLoading(action)
     try {
       const token = localStorage.getItem("token")
-      await fetch(`/api/servers/${id}/${action}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      const res = await fetch(`/api/servers/${id}/${action}`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) {
+        const data = await res.json()
+        setConsoleLogs((prev) => [...prev, `[ERROR] ${data.error || action + " failed"}`])
+      }
       setTimeout(fetchServer, 2000)
-    } catch {} finally { setActionLoading("") }
+      setTimeout(fetchConsole, 2500)
+    } catch { setConsoleLogs((prev) => [...prev, `[ERROR] Failed to ${action} server`]) } finally { setActionLoading("") }
   }
 
   const sendCommand = async () => {
@@ -56,12 +61,18 @@ export default function ServerConsolePage() {
     setConsoleLogs((prev) => [...prev, `> ${command}`])
     try {
       const token = localStorage.getItem("token")
-      await fetch(`/api/servers/${id}/command`, {
+      const res = await fetch(`/api/servers/${id}/command`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ command }),
       })
-    } catch {}
+      const data = await res.json()
+      if (!res.ok) {
+        setConsoleLogs((prev) => [...prev, `[ERROR] ${data.error || "Command failed"}`])
+      }
+    } catch {
+      setConsoleLogs((prev) => [...prev, "[ERROR] Failed to send command"])
+    }
     setCommand("")
   }
 

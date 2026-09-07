@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import https from "https";
 import http from "http";
+import multer from "multer";
 import { exec, spawn, ChildProcess } from "child_process";
 import {
   createLocalServer, startLocalServer, stopLocalServer,
@@ -13,6 +14,22 @@ import {
 } from "../services/processManager";
 
 const router = Router();
+
+const fileStorage = multer.diskStorage({
+  destination: (_req, file, cb) => {
+    const serverId = String(_req.params.id || "");
+    const serverDir = getServerPath(serverId);
+    const subpath = (_req.query.path as string) || "";
+    const dest = path.join(serverDir, subpath);
+    if (!dest.startsWith(serverDir)) return cb(new Error("Invalid path"), "");
+    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+    cb(null, dest);
+  },
+  filename: (_req, file, cb) => {
+    cb(null, Buffer.from(file.originalname, "latin1").toString("utf8"));
+  },
+});
+const fileUpload = multer({ storage: fileStorage, limits: { fileSize: 500 * 1024 * 1024 } });
 
 // Track playit processes in memory
 const playitProcesses: Map<string, ChildProcess> = new Map();
@@ -341,7 +358,7 @@ router.get("/servers/:id/file", authenticate, async (req: Request, res: Response
 router.post("/servers/:id/install-plugin", authenticate, async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
-    const { slug, name } = req.body;
+    const { slug, name, owner } = req.body;
     const server = await prisma.server.findUnique({ where: { id } });
     if (!server) return res.status(404).json({ error: "Server not found" });
 
@@ -351,17 +368,20 @@ router.post("/servers/:id/install-plugin", authenticate, async (req: Request, re
 
     // Try to download the plugin JAR from Hangar
     try {
-      const hangarRes = await fetch(`https://hangar.papermc.io/api/v1/projects/${slug}/versions?limit=1`);
+      const hangarUrl = owner ? `https://hangar.papermc.io/api/v1/projects/${owner}/${slug}/versions?limit=1` : `https://hangar.papermc.io/api/v1/projects/${slug}/versions?limit=1`;
+      const hangarRes = await fetch(hangarUrl);
       if (hangarRes.ok) {
         const hangarData: any = await hangarRes.json();
         const versions = hangarData.result || [];
         if (versions.length > 0) {
           const latest = versions[0];
-          const downloadUrl = latest.downloads?.jar?.url;
+          const platform = server.software.toUpperCase();
+          const dl = latest.downloads?.[platform] || latest.downloads?.PAPER || {};
+          const downloadUrl = dl.downloadUrl;
           if (downloadUrl) {
             const jarRes = await fetch(downloadUrl);
             if (jarRes.ok) {
-              const fileName = `${slug}.jar`;
+              const fileName = dl.fileInfo?.name || `${slug}.jar`;
               const buffer = Buffer.from(await jarRes.arrayBuffer());
               fs.writeFileSync(path.join(pluginsDir, fileName), buffer);
               return res.json({ success: true, message: `Installed ${name || slug}` });
@@ -402,6 +422,84 @@ router.put("/servers/:id/file", authenticate, async (req: Request, res: Response
     return res.json({ success: true });
   } catch (error) {
     console.error("Save file error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// FILE UPLOAD
+// ============================================================
+
+router.post("/servers/:id/upload", authenticate, fileUpload.array("files", 20), async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) return res.status(400).json({ error: "No files uploaded" });
+    return res.json({ success: true, uploaded: files.map((f) => f.originalname) });
+  } catch (error) {
+    console.error("Upload files error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// FILE DELETE
+// ============================================================
+
+router.delete("/servers/:id/file", authenticate, async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+
+    const serverDir = getServerPath(server.id);
+    const filePath = req.query.path as string;
+    if (!filePath) return res.status(400).json({ error: "No path" });
+
+    const fullPath = path.join(serverDir, filePath);
+    if (!fullPath.startsWith(serverDir)) return res.status(403).json({ error: "Access denied" });
+    if (!fs.existsSync(fullPath)) return res.status(404).json({ error: "File not found" });
+
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      fs.rmSync(fullPath, { recursive: true, force: true });
+    } else {
+      fs.unlinkSync(fullPath);
+    }
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Delete file error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// FILE DOWNLOAD
+// ============================================================
+
+router.get("/servers/:id/download", authenticate, async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+
+    const serverDir = getServerPath(server.id);
+    const filePath = req.query.path as string;
+    if (!filePath) return res.status(400).json({ error: "No path" });
+
+    const fullPath = path.join(serverDir, filePath);
+    if (!fullPath.startsWith(serverDir)) return res.status(403).json({ error: "Access denied" });
+    if (!fs.existsSync(fullPath)) return res.status(404).json({ error: "File not found" });
+
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) return res.status(400).json({ error: "Cannot download directory" });
+
+    const fileName = path.basename(fullPath);
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Content-Length", stat.size);
+    const stream = fs.createReadStream(fullPath);
+    stream.pipe(res);
+  } catch (error) {
+    console.error("Download file error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -928,6 +1026,75 @@ router.get("/admin/stats", authenticate, authorize("ADMIN"), async (_req: Reques
     });
   } catch (error) {
     console.error("Get stats error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// ADMIN: RESOURCE LIMITS
+// ============================================================
+
+const DEFAULT_LIMITS = {
+  maxServers: 5,
+  maxRamPerServer: 4096,
+  maxDiskPerServer: 20480,
+  maxCpuPerServer: 100,
+  maxTotalRam: 16384,
+  maxTotalDisk: 102400,
+};
+
+router.get("/admin/limits", authenticate, authorize("ADMIN"), async (_req: Request, res: Response) => {
+  try {
+    const setting = await prisma.setting.findFirst({ where: { group: "limits", key: "defaults" } });
+    const limits = setting ? JSON.parse(setting.value) : DEFAULT_LIMITS;
+    return res.json(limits);
+  } catch (error) {
+    console.error("Get limits error:", error);
+    return res.json(DEFAULT_LIMITS);
+  }
+});
+
+router.put("/admin/limits", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
+  try {
+    const limits = { ...DEFAULT_LIMITS, ...req.body };
+    const existing = await prisma.setting.findFirst({ where: { group: "limits", key: "defaults" } });
+    if (existing) {
+      await prisma.setting.update({ where: { id: existing.id }, data: { value: JSON.stringify(limits) } });
+    } else {
+      await prisma.setting.create({ data: { group: "limits", key: "defaults", value: JSON.stringify(limits) } });
+    }
+    return res.json(limits);
+  } catch (error) {
+    console.error("Update limits error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/admin/limits/user/:userId", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
+  try {
+    const userId = param(req, "userId");
+    const setting = await prisma.setting.findFirst({ where: { group: "limits", key: `user:${userId}` } });
+    const limits = setting ? JSON.parse(setting.value) : null;
+    return res.json(limits);
+  } catch (error) {
+    console.error("Get user limits error:", error);
+    return res.json(null);
+  }
+});
+
+router.put("/admin/limits/user/:userId", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
+  try {
+    const userId = param(req, "userId");
+    const limits = req.body;
+    const existing = await prisma.setting.findFirst({ where: { group: "limits", key: `user:${userId}` } });
+    if (existing) {
+      await prisma.setting.update({ where: { id: existing.id }, data: { value: JSON.stringify(limits) } });
+    } else {
+      await prisma.setting.create({ data: { group: "limits", key: `user:${userId}`, value: JSON.stringify(limits) } });
+    }
+    return res.json(limits);
+  } catch (error) {
+    console.error("Update user limits error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -4,11 +4,13 @@ import React, { useEffect, useState } from "react";
 import { useBranding } from "@/components/BrandingProvider";
 import type { PublicSettings } from "@/lib/api";
 import { useRouter, usePathname } from "next/navigation";
+import { AdBanner } from "@/components/AdBanner";
 import {
   LayoutDashboard, Server, ShoppingBag, FolderOpen, Puzzle, Archive,
   Users, Network, Settings, LogOut, ChevronLeft, ChevronRight, Bell, Search,
   Terminal, Play, Square, RotateCcw, HardDrive, ArrowLeft, ExternalLink,
-  Cpu, Shield, Globe, FileText, Link2, UserPlus, Wifi
+  Cpu, Shield, Globe, FileText, Link2, UserPlus, Wifi,
+  User, Activity, HelpCircle, Sliders, MessageSquare
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -21,6 +23,11 @@ const iconMap: Record<string, React.ReactNode> = {
   Users: <Users size={20} />,
   Network: <Network size={20} />,
   Settings: <Settings size={20} />,
+  User: <User size={20} />,
+  Activity: <Activity size={20} />,
+  HelpCircle: <HelpCircle size={20} />,
+  Sliders: <Sliders size={20} />,
+  MessageSquare: <MessageSquare size={20} />,
 };
 
 interface ServerInfo {
@@ -321,6 +328,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {children}
+
+        {/* Bottom Ad Banner */}
+        {!serverId && (
+          <div className="px-6 py-4">
+            <AdBanner slot="XXXXXXXXXX" format="horizontal" className="rounded-lg" />
+          </div>
+        )}
       </main>
     </div>
   );

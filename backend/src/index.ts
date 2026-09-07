@@ -139,13 +139,13 @@ async function seedDefaults() {
       const defaultNav = [
         { name: "Dashboard", icon: "LayoutDashboard", url: "/dashboard", section: "main", sortOrder: 0 },
         { name: "Servers", icon: "Server", url: "/servers", section: "main", sortOrder: 1 },
-        { name: "Store", icon: "ShoppingBag", url: "/store", section: "main", sortOrder: 2 },
-        { name: "Files", icon: "FolderOpen", url: "/files", section: "main", sortOrder: 3 },
-        { name: "Plugins", icon: "Puzzle", url: "/plugins", section: "main", sortOrder: 4 },
-        { name: "Backups", icon: "Archive", url: "/backups", section: "main", sortOrder: 5 },
+        { name: "Profile", icon: "User", url: "/profile", section: "main", sortOrder: 2 },
+        { name: "Activity", icon: "Activity", url: "/activity", section: "main", sortOrder: 3 },
+        { name: "Support", icon: "HelpCircle", url: "/support", section: "main", sortOrder: 4 },
         { name: "Users", icon: "Users", url: "/admin/users", section: "admin", sortOrder: 6 },
         { name: "Nodes", icon: "Network", url: "/admin/nodes", section: "admin", sortOrder: 7 },
-        { name: "Settings", icon: "Settings", url: "/admin/settings", section: "admin", sortOrder: 8 },
+        { name: "Resource Limits", icon: "Sliders", url: "/admin/limits", section: "admin", sortOrder: 8 },
+        { name: "Settings", icon: "Settings", url: "/admin/settings", section: "admin", sortOrder: 9 },
       ];
       for (const item of defaultNav) {
         await prisma.navigationItem.create({

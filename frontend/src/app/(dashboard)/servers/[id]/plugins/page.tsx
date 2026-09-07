@@ -15,6 +15,7 @@ interface HangarPlugin {
   updatedAt: string
   category: string
   icon?: { url: string }
+  owner?: string
 }
 
 export default function ServerPluginsPage() {
@@ -40,11 +41,24 @@ export default function ServerPluginsPage() {
     if (!q.trim()) { setPlugins([]); return }
     setLoading(true)
     try {
-      const categoryParam = category !== "ALL" ? `&category=${category}` : ""
-      const res = await fetch(`https://hangar.papermc.io/api/v1/search?query=${encodeURIComponent(q)}&limit=20${categoryParam}`)
+      const categoryParam = category !== "ALL" ? `&category=${category.toLowerCase()}` : ""
+      const res = await fetch(`https://hangar.papermc.io/api/v1/projects?q=${encodeURIComponent(q)}&limit=20${categoryParam}`)
       if (res.ok) {
         const data = await res.json()
-        setPlugins(data.result || [])
+        const results = (data.result || []).map((p: any) => ({
+          slug: p.namespace?.slug || p.name?.toLowerCase().replace(/\s+/g, "-") || "",
+          name: p.name || "",
+          description: p.description || "",
+          downloads: p.stats?.downloads || 0,
+          tags: p.tags || [],
+          owners: p.namespace?.owner ? [{ name: p.namespace.owner }] : [],
+          owner: p.namespace?.owner || "",
+          createdAt: p.createdAt || "",
+          updatedAt: p.updatedAt || p.publishedAt || "",
+          category: p.category || "",
+          icon: p.avatarUrl ? { url: p.avatarUrl } : undefined,
+        }))
+        setPlugins(results)
       }
     } catch {
       setPlugins([])
@@ -58,7 +72,7 @@ export default function ServerPluginsPage() {
       await fetch(`/api/servers/${id}/install-plugin`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ slug: plugin.slug, name: plugin.name }),
+        body: JSON.stringify({ slug: plugin.slug, name: plugin.name, owner: plugin.owner }),
       })
       setInstalled((prev) => [...prev, plugin.slug])
     } catch {} finally { setInstalling(null) }

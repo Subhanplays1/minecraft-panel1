@@ -151,4 +151,59 @@ router.post("/logout", authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/auth/profile
+router.put("/profile", authenticate, async (req: Request, res: Response) => {
+  try {
+    const { name, email } = req.body;
+    const userId = req.user!.userId;
+
+    if (email) {
+      const existing = await prisma.user.findFirst({ where: { email, NOT: { id: userId } } });
+      if (existing) return res.status(409).json({ error: "Email already in use" });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { ...(name && { name }), ...(email && { email }) },
+      select: { id: true, email: true, name: true, role: true, avatar: true },
+    });
+    return res.json({ user });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PUT /api/auth/password
+router.put("/password", authenticate, async (req: Request, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user!.userId;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current and new password required" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.password) {
+      return res.status(400).json({ error: "No password set" });
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    return res.json({ message: "Password updated" });
+  } catch (error) {
+    console.error("Update password error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

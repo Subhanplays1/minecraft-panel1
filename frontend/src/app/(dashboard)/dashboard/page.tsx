@@ -328,12 +328,12 @@ export default function DashboardPage() {
                 <span style={{ color: "var(--brand-text)" }}>View All Servers</span>
               </button>
               <button
-                onClick={() => router.push("/files")}
+                onClick={() => router.push("/profile")}
                 className="w-full p-3 rounded-lg text-left text-sm flex items-center gap-3 hover:bg-white/5 transition-all"
                 style={{ backgroundColor: "var(--brand-background)" }}
               >
                 <HardDrive className="w-4 h-4" style={{ color: "var(--brand-warning)" }} />
-                <span style={{ color: "var(--brand-text)" }}>File Manager</span>
+                <span style={{ color: "var(--brand-text)" }}>Profile Settings</span>
               </button>
             </div>
           )}
