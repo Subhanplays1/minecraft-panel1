@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Server, Plus, Search, Cpu, HardDrive, Globe, Play, Square, Trash2, RefreshCw, Loader2 } from "lucide-react"
+import { Server, Plus, Search, Cpu, HardDrive, Globe, Play, Square, Trash2, RefreshCw, ChevronRight, Terminal } from "lucide-react"
 
 interface ServerData { id: string; name: string; status: "RUNNING" | "STOPPED" | "STARTING" | "ERROR"; software: string; mcVersion: string; ram: number; cpu: number; ip: string | null; port: number; createdAt: string; node?: { name: string; location: string } }
 
@@ -24,10 +24,10 @@ export default function ServersPage() {
 
   const statusStyle = (s: string) => {
     switch (s) {
-      case "RUNNING": return { bg: "rgba(34,197,94,0.12)", color: "#22c55e", label: "Online" }
-      case "STOPPED": return { bg: "rgba(239,68,68,0.12)", color: "#EF4444", label: "Offline" }
-      case "STARTING": return { bg: "rgba(245,158,11,0.12)", color: "#F59E0B", label: "Starting" }
-      default: return { bg: "rgba(239,68,68,0.12)", color: "#EF4444", label: "Error" }
+      case "RUNNING": return { bg: "rgba(16,185,129,0.15)", color: "#10b981", label: "Online", dot: "#10b981" }
+      case "STOPPED": return { bg: "rgba(239,68,68,0.15)", color: "#EF4444", label: "Offline", dot: "#EF4444" }
+      case "STARTING": return { bg: "rgba(245,158,11,0.15)", color: "#F59E0B", label: "Starting", dot: "#F59E0B" }
+      default: return { bg: "rgba(239,68,68,0.15)", color: "#EF4444", label: "Error", dot: "#EF4444" }
     }
   }
 
@@ -43,54 +43,112 @@ export default function ServersPage() {
   const running = servers.filter((s) => s.status === "RUNNING").length
 
   return (
-    <div className="p-5 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-5 animate-fade-in">
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--brand-text)" }}>
-            <Server className="w-5 h-5" style={{ color: "var(--brand-primary)" }} /> My Servers
+            <Server size={20} style={{ color: "var(--brand-primary)" }} /> Servers
           </h1>
-          <p className="text-xs mt-0.5" style={{ color: "var(--brand-muted)" }}>{servers.length} server{servers.length !== 1 ? "s" : ""} &middot; {running} running</p>
+          <p className="text-sm mt-0.5" style={{ color: "var(--brand-muted)" }}>
+            {servers.length} server{servers.length !== 1 ? "s" : ""} &middot; {running} running
+          </p>
         </div>
-        <button onClick={() => router.push("/servers/new")} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all hover-lift btn-ripple" style={{ backgroundColor: "var(--brand-primary)", color: "white" }}>
-          <Plus className="w-3.5 h-3.5" /> Create Server
+        <button onClick={() => router.push("/servers/new")} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))" }}>
+          <Plus size={16} /> Create Server
         </button>
       </div>
 
-      <div className="relative mb-4 animate-fade-in-up delay-100">
-        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--brand-muted)" }} />
-        <input type="text" placeholder="Search servers..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 rounded-lg text-xs outline-none focus:ring-1" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)", color: "var(--brand-text)" }} />
+      {/* Search */}
+      <div className="relative mb-6">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "var(--brand-muted)" }} />
+        <input type="text" placeholder="Search servers..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none focus:ring-2 transition-all" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)", color: "var(--brand-text)", "--tw-ring-color": "var(--brand-primary)" } as any} />
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{[1, 2, 3].map((i) => <div key={i} className="p-5 rounded-xl skeleton h-36" />)}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="p-5 rounded-2xl animate-pulse" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
+              <div className="h-5 w-32 rounded mb-3" style={{ backgroundColor: "var(--brand-border)" }} />
+              <div className="h-3 w-48 rounded mb-2" style={{ backgroundColor: "var(--brand-border)" }} />
+              <div className="h-3 w-36 rounded" style={{ backgroundColor: "var(--brand-border)" }} />
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 rounded-xl animate-fade-in" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
-          <Server className="w-12 h-12 mx-auto mb-3 animate-float" style={{ color: "var(--brand-primary)", opacity: 0.3 }} />
-          <p className="text-sm font-medium" style={{ color: "var(--brand-muted)" }}>No servers found</p>
-          <button onClick={() => router.push("/servers/new")} className="mt-3 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: "var(--brand-primary)", color: "white" }}>Create Server</button>
+        <div className="text-center py-20 rounded-2xl" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
+          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "var(--brand-background)" }}>
+            <Server className="w-10 h-10" style={{ color: "var(--brand-muted)", opacity: 0.3 }} />
+          </div>
+          <p className="text-base font-semibold mb-1" style={{ color: "var(--brand-text)" }}>No servers found</p>
+          <p className="text-sm mb-5" style={{ color: "var(--brand-muted)" }}>Create your first Minecraft server to get started</p>
+          <button onClick={() => router.push("/servers/new")} className="px-5 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))" }}>
+            <Plus size={14} className="inline mr-2 -mt-0.5" /> Create Server
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filtered.map((server, idx) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((server) => {
             const st = statusStyle(server.status)
             return (
-              <div key={server.id} className="p-4 rounded-xl card-hover cursor-pointer animate-fade-in-up" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)", animationDelay: `${idx * 60}ms`, opacity: 0, animationFillMode: "forwards" }} onClick={() => router.push(`/servers/${server.id}`)}>
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold truncate" style={{ color: "var(--brand-text)" }}>{server.name}</h3>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ backgroundColor: st.bg, color: st.color }}>{st.label}</span>
+              <div key={server.id} className="group p-5 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02]" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }} onClick={() => router.push(`/servers/${server.id}`)}>
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: st.bg }}>
+                        <Server size={20} style={{ color: st.color }} />
+                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style={{ backgroundColor: st.dot, borderColor: "var(--brand-card)" }} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold" style={{ color: "var(--brand-text)" }}>{server.name}</h3>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: st.color }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: st.dot }} />
+                        {st.label}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
-                    {server.status === "STOPPED" && <button onClick={() => handleAction(server.id, "start")} className="p-1.5 rounded hover:bg-green-500/10" title="Start"><Play className="w-3 h-3 text-green-400" /></button>}
-                    {server.status === "RUNNING" && <button onClick={() => handleAction(server.id, "stop")} className="p-1.5 rounded hover:bg-red-500/10" title="Stop"><Square className="w-3 h-3 text-red-400" /></button>}
-                    {(server.status === "RUNNING" || server.status === "STOPPED") && <button onClick={() => handleAction(server.id, "restart")} className="p-1.5 rounded hover:bg-yellow-500/10" title="Restart"><RefreshCw className="w-3 h-3 text-yellow-400" /></button>}
-                    <button onClick={() => handleAction(server.id, "delete")} className="p-1.5 rounded hover:bg-red-500/10" title="Delete"><Trash2 className="w-3 h-3 text-red-400" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); handleAction(server.id, "delete") }} className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/10 transition-all">
+                    <Trash2 size={13} className="text-red-400" />
+                  </button>
+                </div>
+
+                {/* Details */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-xs" style={{ color: "var(--brand-muted)" }}>
+                    <HardDrive size={12} /> {server.software} {server.mcVersion}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs" style={{ color: "var(--brand-muted)" }}>
+                    <Globe size={12} /> {server.ip || "127.0.0.1"}:{server.port}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs" style={{ color: "var(--brand-muted)" }}>
+                    <Cpu size={12} /> {server.ram >= 1024 ? `${(server.ram / 1024).toFixed(0)} GB` : `${server.ram} MB`} RAM
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-[11px]" style={{ color: "var(--brand-muted)" }}>
-                  <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" /> {server.software} {server.mcVersion}</span>
-                  <span className="flex items-center gap-1"><Cpu className="w-3 h-3" /> {server.ram >= 1024 ? `${(server.ram / 1024).toFixed(0)}G` : `${server.ram}M`}</span>
-                  <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> {server.ip || "127.0.0.1"}:{server.port}</span>
+
+                {/* Actions */}
+                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                  {server.status === "STOPPED" && (
+                    <button onClick={() => handleAction(server.id, "start")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors">
+                      <Play size={12} /> Start
+                    </button>
+                  )}
+                  {server.status === "RUNNING" && (
+                    <>
+                      <button onClick={() => router.push(`/servers/${server.id}`)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors">
+                        <Terminal size={12} /> Console
+                      </button>
+                      <button onClick={() => handleAction(server.id, "stop")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+                        <Square size={12} /> Stop
+                      </button>
+                    </>
+                  )}
+                  {(server.status === "STARTING" || server.status === "ERROR") && (
+                    <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium bg-yellow-500/10 text-yellow-400">
+                      <RefreshCw size={12} className="animate-spin" /> {server.status}
+                    </div>
+                  )}
                 </div>
               </div>
             )

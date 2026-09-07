@@ -1099,4 +1099,44 @@ router.put("/admin/limits/user/:userId", authenticate, authorize("ADMIN"), async
   }
 });
 
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+router.get("/notifications", authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const notifications = await prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    return res.json(notifications);
+  } catch (error) {
+    console.error("Get notifications error:", error);
+    return res.json([]);
+  }
+});
+
+router.put("/notifications/:id/read", authenticate, async (req: Request, res: Response) => {
+  try {
+    await prisma.notification.update({
+      where: { id: param(req, "id") },
+      data: { read: true },
+    });
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/notifications/:id", authenticate, async (req: Request, res: Response) => {
+  try {
+    await prisma.notification.delete({ where: { id: param(req, "id") } });
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
