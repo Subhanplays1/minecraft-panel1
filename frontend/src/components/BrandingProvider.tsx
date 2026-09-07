@@ -128,13 +128,19 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await brandingApi.getPublic();
       setSettings(data);
-      applyThemeVars(theme, data.branding);
-    } catch {
-      applyThemeVars(theme);
-    } finally { setLoading(false); }
-  }, [theme]);
+    } catch {}
+    finally { setLoading(false); }
+  }, []);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
+
+  useEffect(() => {
+    if (settings?.branding) {
+      applyThemeVars(theme, settings.branding);
+    } else {
+      applyThemeVars(theme);
+    }
+  }, [theme, settings]);
 
   return <BrandingContext.Provider value={{ settings, loading, refresh: fetchSettings, theme, toggleTheme }}>{children}</BrandingContext.Provider>;
 }
