@@ -42,12 +42,7 @@ const SOFTWARE_OPTIONS = [
   { id: "paper", name: "Paper", desc: "High-performance Minecraft server with plugin support", category: "Minecraft" },
   { id: "purpur", name: "Purpur", desc: "Fork of Paper with extra configuration options", category: "Minecraft" },
   { id: "spigot", name: "Spigot", desc: "CraftBukkit fork with plugin support", category: "Minecraft" },
-  { id: "fabric", name: "Fabric", desc: "Lightweight mod loader for Minecraft", category: "Modded" },
-  { id: "forge", name: "Forge", desc: "Most popular mod loader for Minecraft", category: "Modded" },
-  { id: "velocity", name: "Velocity Proxy", desc: "Modern Minecraft proxy for network setups", category: "Proxy" },
-  { id: "waterfall", name: "Waterfall", desc: "BungeeCord fork by PaperMC", category: "Proxy" },
-  { id: "nodejs", name: "Node.js", desc: "JavaScript/TypeScript application runtime", category: "Application" },
-  { id: "python", name: "Python", desc: "Python application runtime", category: "Application" },
+  { id: "bungeecord", name: "BungeeCord", desc: "Proxy for Minecraft network server setups", category: "Proxy" },
 ]
 
 const RAM_PRESETS = [

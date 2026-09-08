@@ -144,26 +144,6 @@ export function startLocalServer(id: string, serverData: {
     const bin = parts[0];
     const args = parts.slice(1);
     child = spawn(bin, args, { cwd: serverDir, stdio: ["pipe", "pipe", "pipe"] });
-  } else if (type === "NODEJS" || type === "NODE") {
-    let entry = "index.js";
-    for (const f of ["index.js", "app.js", "server.js", "main.js"]) {
-      if (fs.existsSync(path.join(serverDir, f))) { entry = f; break; }
-    }
-    child = spawn("node", [entry], {
-      cwd: serverDir,
-      env: { ...process.env, PORT: String(serverData.port || 3000), SERVER_PORT: String(serverData.port || 3000) },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-  } else if (type === "PYTHON" || type === "PYTHON3") {
-    let entry = "main.py";
-    for (const f of ["main.py", "app.py", "bot.py", "server.py"]) {
-      if (fs.existsSync(path.join(serverDir, f))) { entry = f; break; }
-    }
-    child = spawn("python3", ["-u", entry], {
-      cwd: serverDir,
-      env: { ...process.env, PORT: String(serverData.port || 8000), PYTHONUNBUFFERED: "1" },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
   } else {
     // Minecraft server
     const jarPath = path.join(serverDir, "server.jar");
