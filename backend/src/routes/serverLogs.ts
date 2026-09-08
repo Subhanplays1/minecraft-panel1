@@ -47,7 +47,7 @@ function readLogLines(filePath: string, tail: number, search: string): string[] 
   return lines.slice(-tail);
 }
 
-router.get("/api/servers/:id/logs", authenticate, async (req: Request, res: Response) => {
+router.get("/servers/:id/logs", authenticate, async (req: Request, res: Response) => {
   try {
     const id = param(req, "id");
     const userId = (req as any).userId;
@@ -66,7 +66,7 @@ router.get("/api/servers/:id/logs", authenticate, async (req: Request, res: Resp
   }
 });
 
-router.get("/api/servers/:id/logs/:filename", authenticate, async (req: Request, res: Response) => {
+router.get("/servers/:id/logs/:filename", authenticate, async (req: Request, res: Response) => {
   try {
     const id = param(req, "id");
     const filename = param(req, "filename");
@@ -92,7 +92,7 @@ router.get("/api/servers/:id/logs/:filename", authenticate, async (req: Request,
   }
 });
 
-router.get("/api/servers/:id/logs/latest", authenticate, async (req: Request, res: Response) => {
+router.get("/servers/:id/logs/latest", authenticate, async (req: Request, res: Response) => {
   try {
     const id = param(req, "id");
     const userId = (req as any).userId;

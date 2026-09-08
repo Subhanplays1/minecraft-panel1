@@ -47,7 +47,7 @@ function getDiskUsage(diskPath: string): { total: number; used: number; free: nu
   return { total: 0, used: 0, free: 0 };
 }
 
-router.get("/api/system/health", authenticate, authorize("ADMIN"), async (_req: Request, res: Response) => {
+router.get("/system/health", authenticate, authorize("ADMIN"), async (_req: Request, res: Response) => {
   try {
     const cpuUsage = getCpuUsage();
     const totalMem = os.totalmem();
@@ -77,7 +77,7 @@ router.get("/api/system/health", authenticate, authorize("ADMIN"), async (_req: 
   }
 });
 
-router.get("/api/system/health/node/:nodeId", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
+router.get("/system/health/node/:nodeId", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
   try {
     const nodeId = param(req, "nodeId");
     const node = await prisma.node.findUnique({ where: { id: nodeId } });
@@ -113,7 +113,7 @@ router.get("/api/system/health/node/:nodeId", authenticate, authorize("ADMIN"), 
   }
 });
 
-router.get("/api/servers/:id/resources", authenticate, async (req: Request, res: Response) => {
+router.get("/servers/:id/resources", authenticate, async (req: Request, res: Response) => {
   try {
     const id = param(req, "id");
     const server = await prisma.server.findUnique({ where: { id } });

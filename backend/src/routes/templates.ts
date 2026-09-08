@@ -88,11 +88,11 @@ const TEMPLATES = [
 
 const router = Router();
 
-router.get("/api/templates", authenticate, (req: Request, res: Response) => {
+router.get("/templates", authenticate, (req: Request, res: Response) => {
   res.json(TEMPLATES);
 });
 
-router.get("/api/templates/:id", authenticate, (req: Request, res: Response) => {
+router.get("/templates/:id", authenticate, (req: Request, res: Response) => {
   const template = TEMPLATES.find((t) => t.id === req.params.id);
 
   if (!template) {
