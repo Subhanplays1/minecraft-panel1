@@ -16,6 +16,17 @@ import { sendServerInvoiceDM } from "../services/discordBot";
 
 const router = Router();
 
+const BASE_PORT = 25565;
+const MAX_PORT = 25655;
+
+async function findAvailablePort(): Promise<number> {
+  const usedPorts = (await prisma.server.findMany({ select: { port: true } })).map(s => s.port);
+  for (let port = BASE_PORT; port <= MAX_PORT; port++) {
+    if (!usedPorts.includes(port)) return port;
+  }
+  throw new Error("No available ports");
+}
+
 const fileStorage = multer.diskStorage({
   destination: (_req, file, cb) => {
     const serverId = String(_req.params.id || "");
@@ -74,7 +85,7 @@ router.get("/servers", authenticate, async (req: Request, res: Response) => {
 
 router.post("/servers", authenticate, async (req: Request, res: Response) => {
   try {
-    const { name, software, mcVersion, ram, cpu, disk, port, nodeId, startupCmd } = req.body;
+    const { name, software, mcVersion, ram, cpu, disk, nodeId, startupCmd } = req.body;
 
     if (!name || name.trim().length < 3) {
       return res.status(400).json({ error: "Server name must be at least 3 characters" });
@@ -86,11 +97,8 @@ router.post("/servers", authenticate, async (req: Request, res: Response) => {
       return res.status(400).json({ error: "A server with this name already exists" });
     }
 
-    // Check port uniqueness
-    const portUsed = await prisma.server.findFirst({ where: { port: port || 25565 } });
-    if (portUsed) {
-      return res.status(400).json({ error: `Port ${port || 25565} is already in use` });
-    }
+    // Auto-assign port
+    const assignedPort = await findAvailablePort();
 
     // Enforce resource limits
     const userId = req.user!.userId;
@@ -157,7 +165,7 @@ router.post("/servers", authenticate, async (req: Request, res: Response) => {
         ram: ram || 2048,
         cpu: cpu || 100,
         disk: disk || 10240,
-        port: port || 25565,
+        port: assignedPort,
         ip: "127.0.0.1",
         status: "INSTALLING",
         startupCmd: startupCmd || null,

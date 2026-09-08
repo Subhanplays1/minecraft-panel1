@@ -59,7 +59,6 @@ export default function NewServerPage() {
   const [ram, setRam] = useState(2048)
   const [disk, setDisk] = useState(10240)
   const [cpu, setCpu] = useState(100)
-  const [port, setPort] = useState(25565)
   const [selectedNode, setSelectedNode] = useState("")
   const [gamemode, setGamemode] = useState("survival")
   const [difficulty, setDifficulty] = useState("normal")
@@ -145,7 +144,7 @@ export default function NewServerPage() {
   const canProceed = (step: number) => {
     if (step === 1) return serverName.trim().length >= 3
     if (step === 2) return software && mcVersion
-    if (step === 3) return ram > 0 && disk > 0 && port > 0
+    if (step === 3) return ram > 0 && disk > 0
     return true
   }
 
@@ -171,7 +170,6 @@ export default function NewServerPage() {
           ram,
           disk,
           cpu,
-          port,
           nodeId: selectedNode,
           autoStart,
         }),
@@ -484,20 +482,10 @@ export default function NewServerPage() {
               </div>
             </div>
 
-            {/* Port */}
-            <div>
-              <label className="text-sm font-medium mb-2 block" style={{ color: "var(--brand-text)" }}>Port</label>
-              <input
-                type="number"
-                min={1024}
-                max={65535}
-                value={port}
-                onChange={(e) => setPort(parseInt(e.target.value) || 25565)}
-                className="w-full px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
-                style={inputStyle}
-              />
-              <p className="text-xs mt-1" style={{ color: "var(--brand-muted)" }}>
-                Minecraft default: 25565. Each server needs a unique port.
+            {/* Auto-assigned port info */}
+            <div className="p-3 rounded-lg" style={{ backgroundColor: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>
+              <p className="text-sm" style={{ color: "var(--brand-text)" }}>
+                Port will be automatically assigned (25565-25655)
               </p>
             </div>
           </div>
@@ -591,7 +579,7 @@ export default function NewServerPage() {
                 <div style={{ color: "var(--brand-muted)" }}>Disk:</div>
                 <div style={{ color: "var(--brand-text)" }}>{Math.floor(disk / 1024)} GB</div>
                 <div style={{ color: "var(--brand-muted)" }}>Port:</div>
-                <div style={{ color: "var(--brand-text)" }}>{port}</div>
+                <div style={{ color: "var(--brand-text)" }}>Auto-assigned</div>
                 <div style={{ color: "var(--brand-muted)" }}>Gamemode:</div>
                 <div style={{ color: "var(--brand-text)" }}>{gamemode}</div>
               </div>
