@@ -155,6 +155,11 @@ router.post("/servers", authenticate, async (req: Request, res: Response) => {
       });
     }
 
+    // Get renewal days setting
+    const renewalSetting = await prisma.setting.findFirst({ where: { group: "renewal", key: "days" } });
+    const renewalDays = renewalSetting ? parseInt(renewalSetting.value) : 3;
+    const renewalAt = new Date(Date.now() + renewalDays * 24 * 60 * 60 * 1000);
+
     const server = await prisma.server.create({
       data: {
         name: name.trim(),
@@ -171,6 +176,8 @@ router.post("/servers", authenticate, async (req: Request, res: Response) => {
         status: "INSTALLING",
         startupCmd: startupCmd || null,
         notes: notes || null,
+        renewalAt,
+        renewedAt: new Date(),
       },
     });
 
@@ -280,6 +287,10 @@ router.post("/servers/:id/start", authenticate, async (req: Request, res: Respon
     }
     if (isRunning(server.id)) {
       return res.json({ message: "Server is already running" });
+    }
+    // Block expired servers
+    if (server.renewalAt && new Date(server.renewalAt) < new Date()) {
+      return res.status(403).json({ error: "Server has expired. Please renew your server to start it." });
     }
 
     await prisma.server.update({ where: { id: server.id }, data: { status: "STARTING" } });
@@ -1331,6 +1342,148 @@ router.delete("/notifications/:id", authenticate, async (req: Request, res: Resp
     await prisma.notification.delete({ where: { id: param(req, "id") } });
     return res.json({ success: true });
   } catch (error) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// RENEWAL
+// ============================================================
+
+router.get("/servers/:id/renewal", authenticate, async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+    if (req.user!.role !== "ADMIN" && server.userId !== req.user!.userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    const now = new Date();
+    const renewalAt = server.renewalAt ? new Date(server.renewalAt) : null;
+    const msLeft = renewalAt ? renewalAt.getTime() - now.getTime() : null;
+    const daysLeft = msLeft !== null ? Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24))) : null;
+    const hoursLeft = msLeft !== null ? Math.max(0, Math.floor((msLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))) : null;
+    const expired = msLeft !== null && msLeft <= 0;
+
+    return res.json({
+      renewalAt: server.renewalAt,
+      renewedAt: server.renewedAt,
+      daysLeft,
+      hoursLeft,
+      expired,
+      totalMs: msLeft,
+    });
+  } catch (error) {
+    console.error("Get renewal error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/servers/:id/renew", authenticate, async (req: Request, res: Response) => {
+  try {
+    const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
+    if (!server) return res.status(404).json({ error: "Server not found" });
+    if (req.user!.role !== "ADMIN" && server.userId !== req.user!.userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const renewalSetting = await prisma.setting.findFirst({ where: { group: "renewal", key: "days" } });
+    const renewalDays = renewalSetting ? parseInt(renewalSetting.value) : 3;
+    const now = new Date();
+    const renewalAt = new Date(now.getTime() + renewalDays * 24 * 60 * 60 * 1000);
+
+    await prisma.server.update({
+      where: { id: server.id },
+      data: { renewalAt, renewedAt: now },
+    });
+
+    return res.json({
+      success: true,
+      renewalAt,
+      renewedAt: now,
+      renewalDays,
+      message: `Server renewed for ${renewalDays} days`,
+    });
+  } catch (error) {
+    console.error("Renew server error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// ADMIN: RENEWAL SETTINGS
+// ============================================================
+
+router.get("/admin/renewal", authenticate, authorize("ADMIN"), async (_req: Request, res: Response) => {
+  try {
+    const setting = await prisma.setting.findFirst({ where: { group: "renewal", key: "days" } });
+    const days = setting ? parseInt(setting.value) : 3;
+
+    const now = new Date();
+    const warningDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 1 day from now
+    const expiredServers = await prisma.server.findMany({
+      where: { renewalAt: { lt: now }, status: { notIn: ["INSTALLING"] } },
+      include: { user: { select: { id: true, name: true, email: true, discordId: true, discordVerified: true } } },
+      orderBy: { renewalAt: "asc" },
+    });
+    const expiringSoon = await prisma.server.findMany({
+      where: { renewalAt: { gt: now, lt: warningDate }, status: { notIn: ["INSTALLING"] } },
+      include: { user: { select: { id: true, name: true, email: true, discordId: true, discordVerified: true } } },
+      orderBy: { renewalAt: "asc" },
+    });
+
+    return res.json({
+      renewalDays: days,
+      expiredServers: expiredServers.map((s) => ({
+        id: s.id, name: s.name, status: s.status, renewalAt: s.renewalAt, userId: s.userId,
+        userName: s.user.name, userEmail: s.user.email,
+      })),
+      expiringSoon: expiringSoon.map((s) => ({
+        id: s.id, name: s.name, status: s.status, renewalAt: s.renewalAt, userId: s.userId,
+        userName: s.user.name, userEmail: s.user.email,
+      })),
+      totalServers: await prisma.server.count({ where: { status: { notIn: ["INSTALLING"] } } }),
+    });
+  } catch (error) {
+    console.error("Get renewal settings error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/admin/renewal", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
+  try {
+    const { days } = req.body;
+    if (typeof days !== "number" || days < 1 || days > 365) {
+      return res.status(400).json({ error: "Days must be between 1 and 365" });
+    }
+    const existing = await prisma.setting.findFirst({ where: { group: "renewal", key: "days" } });
+    if (existing) {
+      await prisma.setting.update({ where: { id: existing.id }, data: { value: String(days) } });
+    } else {
+      await prisma.setting.create({ data: { group: "renewal", key: "days", value: String(days) } });
+    }
+    return res.json({ renewalDays: days });
+  } catch (error) {
+    console.error("Update renewal settings error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/admin/renewal/extend/:userId", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
+  try {
+    const userId = param(req, "userId");
+    const { days } = req.body;
+    const extension = (days || 3) * 24 * 60 * 60 * 1000;
+
+    const servers = await prisma.server.findMany({ where: { userId } });
+    for (const server of servers) {
+      const currentRenewal = server.renewalAt ? new Date(server.renewalAt).getTime() : Date.now();
+      const newRenewal = new Date(Math.max(currentRenewal, Date.now()) + extension);
+      await prisma.server.update({ where: { id: server.id }, data: { renewalAt: newRenewal } });
+    }
+
+    return res.json({ success: true, extended: servers.length, days: days || 3 });
+  } catch (error) {
+    console.error("Extend renewal error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

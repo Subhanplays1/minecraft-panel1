@@ -2,20 +2,23 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
-import { Play, Square, RotateCcw, Send, Loader2, Terminal, Cpu, HardDrive, Globe, Copy, Check } from "lucide-react"
+import { Play, Square, RotateCcw, Send, Loader2, Terminal, Cpu, HardDrive, Globe, Copy, Check, AlertTriangle, Clock } from "lucide-react"
 
-interface ServerInfo { id: string; name: string; status: "RUNNING" | "STOPPED" | "STARTING" | "ERROR"; software: string; mcVersion: string; ram: number; cpu: number; disk: number; port: number; ip: string | null }
+interface ServerInfo { id: string; name: string; status: "RUNNING" | "STOPPED" | "STARTING" | "ERROR" | "EXPIRED"; software: string; mcVersion: string; ram: number; cpu: number; disk: number; port: number; ip: string | null }
+interface RenewalInfo { renewalAt: string | null; renewedAt: string | null; daysLeft: number | null; hoursLeft: number | null; expired: boolean; totalMs: number | null }
 
 export default function ServerConsolePage() {
   const params = useParams()
   const id = params.id as string
   const [server, setServer] = useState<ServerInfo | null>(null)
+  const [renewal, setRenewal] = useState<RenewalInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [consoleLogs, setConsoleLogs] = useState<string[]>([])
   const [command, setCommand] = useState("")
   const consoleRef = useRef<HTMLDivElement>(null)
   const [actionLoading, setActionLoading] = useState("")
   const [copied, setCopied] = useState(false)
+  const [renewLoading, setRenewLoading] = useState(false)
 
   const fetchServer = async () => {
     try {
@@ -23,6 +26,26 @@ export default function ServerConsolePage() {
       const res = await fetch(`/api/servers/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       if (res.ok) { const d = await res.json(); setServer(d) }
     } catch {} finally { setLoading(false) }
+  }
+
+  const fetchRenewal = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/servers/${id}/renewal`, { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) { const d = await res.json(); setRenewal(d) }
+    } catch {}
+  }
+
+  const renewServer = async () => {
+    setRenewLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/servers/${id}/renew`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      const d = await res.json()
+      if (res.ok) { fetchRenewal(); fetchServer() }
+      else { setConsoleLogs((p) => [...p, `[ERROR] ${d.error || "Renewal failed"}`]) }
+    } catch { setConsoleLogs((p) => [...p, "[ERROR] Failed to renew"]) }
+    finally { setRenewLoading(false) }
   }
 
   const fetchConsole = async () => {
@@ -57,7 +80,7 @@ export default function ServerConsolePage() {
 
   const copyLogs = () => { navigator.clipboard.writeText(consoleLogs.join("\n")); setCopied(true); setTimeout(() => setCopied(false), 2000) }
 
-  useEffect(() => { fetchServer() }, [id])
+  useEffect(() => { fetchServer(); fetchRenewal() }, [id])
   useEffect(() => { if (server?.status === "RUNNING") fetchConsole() }, [server?.status])
   useEffect(() => { const t = setInterval(fetchConsole, 2000); return () => clearInterval(t) }, [id])
   useEffect(() => { if (consoleRef.current) consoleRef.current.scrollTop = consoleRef.current.scrollHeight }, [consoleLogs])
@@ -65,10 +88,36 @@ export default function ServerConsolePage() {
   if (loading) return <div className="p-5 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--brand-muted)" }} strokeWidth={1.5} /></div>
   if (!server) return <div className="p-5 text-center text-[12px]" style={{ color: "var(--brand-muted)" }}>Server not found</div>
 
-  const statusLabel = { RUNNING: "Running", STOPPED: "Stopped", STARTING: "Starting", ERROR: "Error" }[server.status] || server.status
+  const statusLabel = { RUNNING: "Running", STOPPED: "Stopped", STARTING: "Starting", ERROR: "Error", EXPIRED: "Expired" }[server.status] || server.status
 
   return (
     <div className="p-5 md:p-6 max-w-[1200px] mx-auto">
+      {/* Renewal banner */}
+      {renewal && (renewal.expired || (renewal.daysLeft !== null && renewal.daysLeft <= 3)) && (
+        <div className="mb-4 p-3 rounded-xl flex items-center justify-between" style={{
+          backgroundColor: renewal.expired ? "#1a0a0a" : "#1a1a0a",
+          border: `1px solid ${renewal.expired ? "#3a1515" : "#3a3515"}`,
+        }}>
+          <div className="flex items-center gap-2.5">
+            {renewal.expired ? (
+              <AlertTriangle size={15} strokeWidth={1.5} className="text-red-500" />
+            ) : (
+              <Clock size={15} strokeWidth={1.5} className="text-yellow-500" />
+            )}
+            <div>
+              <div className="text-[12px] font-medium" style={{ color: renewal.expired ? "#f87171" : "#facc15" }}>
+                {renewal.expired ? "Server Expired" : `Renews in ${renewal.daysLeft}d ${renewal.hoursLeft}h`}
+              </div>
+              <div className="text-[10px]" style={{ color: "var(--brand-muted)" }}>
+                {renewal.expired ? "Renew to restart your server" : `Expires ${new Date(renewal.renewalAt!).toLocaleDateString()}`}
+              </div>
+            </div>
+          </div>
+          <button onClick={renewServer} disabled={renewLoading} className="btn-primary text-[11px] py-1.5 px-3 disabled:opacity-40">
+            {renewLoading ? <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} /> : "Renew"}
+          </button>
+        </div>
+      )}
       {/* Top bar */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">

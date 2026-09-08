@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Server, Plus, Search, HardDrive, Globe, Play, Square, Trash2, RefreshCw, Terminal } from "lucide-react"
+import { Server, Plus, Search, HardDrive, Globe, Play, Square, Trash2, RefreshCw, Terminal, Clock, AlertTriangle } from "lucide-react"
 
-interface ServerData { id: string; name: string; status: "RUNNING" | "STOPPED" | "STARTING" | "ERROR"; software: string; mcVersion: string; ram: number; cpu: number; ip: string | null; port: number; createdAt: string; node?: { name: string; location: string } }
+interface ServerData { id: string; name: string; status: "RUNNING" | "STOPPED" | "STARTING" | "ERROR" | "EXPIRED"; software: string; mcVersion: string; ram: number; cpu: number; ip: string | null; port: number; createdAt: string; renewalAt: string | null; node?: { name: string; location: string } }
 
 export default function ServersPage() {
   const router = useRouter()
@@ -97,7 +97,7 @@ export default function ServersPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="text-[13px] font-medium" style={{ color: "var(--brand-text)" }}>{server.name}</h3>
                     <span className="flex items-center gap-1">
-                      <span className={`status-dot ${server.status === "RUNNING" ? "running" : server.status === "STOPPED" ? "stopped" : "starting"}`} />
+                      <span className={`status-dot ${server.status === "RUNNING" ? "running" : server.status === "STOPPED" || server.status === "EXPIRED" ? "stopped" : "starting"}`} />
                       <span className="text-[10px] font-medium" style={{ color: "var(--brand-muted)" }}>{server.status.toLowerCase()}</span>
                     </span>
                   </div>
@@ -105,15 +105,26 @@ export default function ServersPage() {
                     <span className="flex items-center gap-1"><HardDrive size={10} strokeWidth={1.5} /> {server.software} {server.mcVersion}</span>
                     <span className="flex items-center gap-1"><Globe size={10} strokeWidth={1.5} /> {server.ip || "127.0.0.1"}:{server.port}</span>
                     <span className="hidden sm:flex items-center gap-1">RAM {server.ram >= 1024 ? `${(server.ram / 1024).toFixed(0)} GB` : `${server.ram} MB`}</span>
+                    {server.renewalAt && (() => {
+                      const msLeft = new Date(server.renewalAt).getTime() - Date.now()
+                      const daysLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24)))
+                      const expired = msLeft <= 0
+                      return (
+                        <span className={`flex items-center gap-1 ${expired ? "text-red-400" : daysLeft <= 1 ? "text-yellow-400" : ""}`}>
+                          {expired ? <AlertTriangle size={10} strokeWidth={1.5} /> : <Clock size={10} strokeWidth={1.5} />}
+                          {expired ? "Expired" : `${daysLeft}d left`}
+                        </span>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>
 
               {/* Right actions */}
               <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                {server.status === "STOPPED" && (
-                  <button onClick={() => handleAction(server.id, "start")} className="btn-ghost text-[11px]">
-                    <Play size={12} strokeWidth={1.5} /> Start
+                {(server.status === "STOPPED" || server.status === "EXPIRED") && (
+                  <button onClick={() => router.push(`/servers/${server.id}`)} className="btn-ghost text-[11px]">
+                    <Clock size={12} strokeWidth={1.5} /> Renew
                   </button>
                 )}
                 {server.status === "RUNNING" && (

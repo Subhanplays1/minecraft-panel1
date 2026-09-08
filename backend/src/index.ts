@@ -27,6 +27,7 @@ import { stopLocalServer, isRunning, onCrash } from "./services/processManager";
 import { triggerWebhooks } from "./routes/webhooks";
 import { startSftpServer, stopSftpServer } from "./services/sftpServer";
 import http from "http";
+import { sendRenewalReminderDM } from "./services/discordBot";
 
 const app = express();
 const server = http.createServer(app);
@@ -144,6 +145,58 @@ async function gracefulShutdown(signal: string) {
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 
+// ============================================================
+// RENEWAL CHECKER — runs every 60s, stops expired, sends reminders
+// ============================================================
+const notifiedServers = new Map<string, number>(); // serverId -> lastReminderDay
+
+function startRenewalChecker() {
+  setInterval(async () => {
+    try {
+      const now = new Date();
+
+      // Stop expired servers
+      const expired = await prisma.server.findMany({
+        where: { renewalAt: { gt: new Date(0), lt: now }, status: { in: ["RUNNING"] } },
+      });
+      for (const s of expired) {
+        try {
+          if (isRunning(s.id)) stopLocalServer(s.id);
+          await prisma.server.update({ where: { id: s.id }, data: { status: "EXPIRED" } });
+          console.log(`[Panel] Server ${s.name} expired — stopped`);
+        } catch (e: any) {
+          console.error(`[Panel] Failed to stop expired server ${s.name}: ${e.message}`);
+        }
+      }
+
+      // Send reminders: 3 days, 1 day, and day-of expiry
+      const reminderWindow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const servers = await prisma.server.findMany({
+        where: { renewalAt: { gt: now, lt: reminderWindow }, status: { notIn: ["INSTALLING", "EXPIRED"] } },
+        include: { user: true },
+      });
+      for (const s of servers) {
+        const renewalAt = new Date(s.renewalAt!);
+        const msLeft = renewalAt.getTime() - now.getTime();
+        const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+        const lastNotified = notifiedServers.get(s.id);
+
+        // Only notify once per day threshold
+        if (lastNotified === daysLeft) continue;
+        notifiedServers.set(s.id, daysLeft);
+
+        if (s.user.discordId && s.user.discordVerified) {
+          try {
+            await sendRenewalReminderDM(s.user.discordId, s.name, daysLeft, s.id);
+          } catch {}
+        }
+      }
+    } catch (err: any) {
+      console.error(`[Panel] Renewal checker error: ${err.message}`);
+    }
+  }, 60_000);
+}
+
 // Auto-setup database and start server
 async function main() {
   try {
@@ -199,6 +252,7 @@ async function main() {
       console.log(`Health: http://localhost:${PORT}/api/health`);
       startSftpServer();
       startScheduler();
+      startRenewalChecker();
     });
   } catch (error) {
     console.error("Failed to start server:", error);

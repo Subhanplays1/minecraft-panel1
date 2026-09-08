@@ -314,22 +314,24 @@ export async function sendServerInvoiceDM(
 export async function sendRenewalReminderDM(
   discordUserId: string,
   serverName: string,
-  renewalDate: Date,
-  amount: number,
-  currency: string
+  daysLeft: number,
+  serverId: string,
 ): Promise<boolean> {
   if (!discordClient || !isReady) return false;
 
   try {
     const user = await discordClient.users.fetch(discordUserId);
+    const urgency = daysLeft <= 0 ? "EXPIRED" : daysLeft === 1 ? "TOMORROW" : `in ${daysLeft} days`;
+    const color = daysLeft <= 0 ? 0xEF4444 : daysLeft === 1 ? 0xF59E0B : 0x3B82F6;
+
     const embed = new EmbedBuilder()
-      .setTitle("Server Renewal Reminder")
-      .setDescription(`Your server **${serverName}** is due for renewal.`)
-      .setColor(0xEAB308)
+      .setTitle(daysLeft <= 0 ? "Server Expired" : "Server Renewal Reminder")
+      .setDescription(`Your server **${serverName}** ${daysLeft <= 0 ? "has expired and is now stopped" : `expires ${urgency}`}.`)
+      .setColor(color)
       .addFields(
         { name: "Server", value: serverName, inline: true },
-        { name: "Renewal Date", value: `<t:${Math.floor(renewalDate.getTime() / 1000)}:F>`, inline: true },
-        { name: "Amount", value: `${amount} ${currency}`, inline: true }
+        { name: "Status", value: urgency, inline: true },
+        { name: "Action Required", value: "Log in to your panel and click **Renew** to extend your server.", inline: false },
       )
       .setFooter({ text: "Minevo Panel" })
       .setTimestamp();
