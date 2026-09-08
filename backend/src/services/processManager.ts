@@ -182,8 +182,10 @@ export function startLocalServer(id: string, serverData: {
       }
     }
 
-    // Ensure EULA
-    fs.writeFileSync(path.join(serverDir, "eula.txt"), "eula=true\n");
+    // Ensure EULA (not needed for proxy servers)
+    if (!["VELOCITY", "BUNGEECORD", "WATERFALL"].includes(type)) {
+      fs.writeFileSync(path.join(serverDir, "eula.txt"), "eula=true\n");
+    }
 
     const javaBin = resolveJavaBinary();
     if (!javaBin) {
@@ -193,12 +195,19 @@ export function startLocalServer(id: string, serverData: {
     }
 
     const memory = serverData.ram || 2;
-    child = spawn(javaBin, [
+    const isProxy = ["VELOCITY", "BUNGEECORD", "WATERFALL"].includes(type);
+    const javaArgs = [
       `-Xms${Math.floor(memory / 1024)}G`,
       `-Xmx${Math.floor(memory / 1024)}G`,
-      "-Djline.terminal=jline.UnsupportedTerminal",
-      "-jar", "server.jar", "nogui", "--nojline",
-    ], { cwd: serverDir, stdio: ["pipe", "pipe", "pipe"] });
+    ];
+    if (!isProxy) {
+      javaArgs.push("-Djline.terminal=jline.UnsupportedTerminal");
+    }
+    javaArgs.push("-jar", "server.jar");
+    if (!isProxy) {
+      javaArgs.push("nogui", "--nojline");
+    }
+    child = spawn(javaBin, javaArgs, { cwd: serverDir, stdio: ["pipe", "pipe", "pipe"] });
   }
 
   processes.set(id, child);
