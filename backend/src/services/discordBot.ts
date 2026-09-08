@@ -1,8 +1,9 @@
-import { Client, GatewayIntentBits, Events, EmbedBuilder, TextChannel, DMChannel, SlashCommandBuilder, InteractionEditReplyOptions } from "discord.js";
+import { Client, GatewayIntentBits, Events, EmbedBuilder, TextChannel, DMChannel, SlashCommandBuilder } from "discord.js";
 import { prisma } from "../utils/prisma";
 
 let discordClient: Client | null = null;
 let isReady = false;
+let isInitializing = false;
 
 export function getDiscordClient(): Client | null {
   return discordClient;
@@ -12,7 +13,7 @@ export function isDiscordReady(): boolean {
   return isReady && discordClient?.isReady() === true;
 }
 
-async function handleVerify(code: string, interaction: any, settings: any): Promise<InteractionEditReplyOptions> {
+async function handleVerify(code: string, interaction: any, settings: any): Promise<{ content?: string; embeds?: any[] }> {
   if (!code) {
     return { content: "Usage: `/verify <CODE>`" };
   }
@@ -77,7 +78,9 @@ async function handleVerify(code: string, interaction: any, settings: any): Prom
           { name: "Code", value: `\`${upperCode}\``, inline: true }
         )
         .setTimestamp();
-      await logChannel.send({ embeds: [logEmbed] });
+      await logChannel.send({ embeds: [logEmbed] }).catch((err) => {
+        console.error("[Discord] Cannot send to log channel. Check bot permissions:", err.message);
+      });
     }
   }
 
@@ -97,12 +100,26 @@ async function handleVerify(code: string, interaction: any, settings: any): Prom
 }
 
 export async function initializeDiscordBot(): Promise<void> {
+  if (isInitializing || (discordClient && isReady)) {
+    console.log("[Discord] Bot already initialized, skipping");
+    return;
+  }
+  isInitializing = true;
+
+  // Disconnect existing client
+  if (discordClient) {
+    try { discordClient.destroy(); } catch {}
+    discordClient = null;
+    isReady = false;
+  }
+
   const settings = await prisma.discordSettings.findUnique({
     where: { tenantId: "default" }
   });
 
   if (!settings?.isEnabled || !settings?.botToken) {
     console.log("[Discord] Bot not configured or disabled");
+    isInitializing = false;
     return;
   }
 
@@ -117,6 +134,7 @@ export async function initializeDiscordBot(): Promise<void> {
 
   discordClient.once(Events.ClientReady, async (client) => {
     isReady = true;
+    isInitializing = false;
     console.log(`[Discord] Bot logged in as ${client.user.tag}`);
 
     try {
@@ -146,24 +164,22 @@ export async function initializeDiscordBot(): Promise<void> {
       const embed = new EmbedBuilder()
         .setDescription(`Please use the <#${settings.verificationChannelId}> channel to verify your account.`)
         .setColor(0xF59E0B);
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
       return;
     }
-
-    await interaction.deferReply();
 
     const reply = await handleVerify(code, interaction, settings);
 
     try {
-      await interaction.editReply(reply);
-    } catch (error) {
-      console.error("[Discord] Failed to reply to interaction:", error);
+      await interaction.reply(reply);
+    } catch {
+      try { await interaction.editReply(reply); } catch {}
     }
 
     if (settings.verificationChannelId && interaction.channelId === settings.verificationChannelId) {
-      try {
-        await interaction.deleteReply();
-      } catch {}
+      setTimeout(async () => {
+        try { await interaction.deleteReply(); } catch {}
+      }, 3000);
     }
   });
 
@@ -193,6 +209,7 @@ export async function initializeDiscordBot(): Promise<void> {
   } catch (error) {
     console.error("[Discord] Failed to login:", error);
     isReady = false;
+    isInitializing = false;
   }
 }
 
