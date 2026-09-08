@@ -33,6 +33,7 @@ model User {
   // Discord verification
   discordId           String?
   discordUsername     String?
+  discordDisplayName  String?
   discordAvatar       String?
   discordVerified     Boolean   @default(false)
   discordVerifiedAt   DateTime?

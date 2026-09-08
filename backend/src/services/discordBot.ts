@@ -41,6 +41,26 @@ async function handleVerify(code: string, interaction: any, settings: any): Prom
     return { content: "This verification code has expired. Please generate a new one on the panel." };
   }
 
+  const existingDiscordUser = await prisma.user.findFirst({
+    where: {
+      discordId: interaction.user.id,
+      id: { not: verification.userId }
+    }
+  });
+
+  if (existingDiscordUser) {
+    await prisma.discordVerification.update({
+      where: { id: verification.id },
+      data: { status: "REJECTED" }
+    });
+    return {
+      content: `This Discord account is already linked to another panel account (${existingDiscordUser.email}). Please unlink it first or use a different Discord account.`
+    };
+  }
+
+  const avatarUrl = interaction.user.avatar ? interaction.user.displayAvatarURL({ extension: "png", size: 256 }) : null;
+  const displayName = interaction.user.globalName || interaction.user.username;
+
   await prisma.$transaction(async (tx) => {
     await tx.discordVerification.update({
       where: { id: verification.id },
@@ -57,11 +77,14 @@ async function handleVerify(code: string, interaction: any, settings: any): Prom
       data: {
         discordId: interaction.user.id,
         discordUsername: interaction.user.tag,
-        discordAvatar: interaction.user.avatar ? interaction.user.displayAvatarURL() : null,
+        discordDisplayName: displayName,
+        discordAvatar: avatarUrl,
         discordVerified: true,
         discordVerifiedAt: new Date(),
         verificationCode: null,
         verificationCodeExpires: null,
+        name: displayName,
+        avatar: avatarUrl || undefined,
       }
     });
   });
@@ -72,10 +95,11 @@ async function handleVerify(code: string, interaction: any, settings: any): Prom
       const logEmbed = new EmbedBuilder()
         .setTitle("New Discord Verification")
         .setColor(0x3B82F6)
+        .setThumbnail(avatarUrl || undefined)
         .addFields(
-          { name: "User", value: `<@${interaction.user.id}> (${interaction.user.tag})`, inline: true },
-          { name: "Panel User", value: verification.user.email, inline: true },
-          { name: "Code", value: `\`${upperCode}\``, inline: true }
+          { name: "Discord User", value: `<@${interaction.user.id}> (${interaction.user.tag})`, inline: true },
+          { name: "Panel Account", value: verification.user.email, inline: true },
+          { name: "Display Name", value: displayName, inline: true }
         )
         .setTimestamp();
       await logChannel.send({ embeds: [logEmbed] }).catch((err) => {
@@ -84,16 +108,25 @@ async function handleVerify(code: string, interaction: any, settings: any): Prom
     }
   }
 
+  const serverCount = await prisma.server.count({ where: { userId: verification.userId } });
+  const memberSince = Math.floor(verification.user.createdAt.getTime() / 1000);
+
   return {
     embeds: [
       new EmbedBuilder()
         .setTitle("Verification Successful")
-        .setDescription("Your Discord account has been linked to your Minevo account!")
+        .setDescription(`Your Discord account has been linked to your Minevo account! Your profile has been updated.`)
         .setColor(0x22C55E)
+        .setThumbnail(avatarUrl || undefined)
         .addFields(
-          { name: "Discord", value: interaction.user.tag, inline: true },
-          { name: "Status", value: "Verified", inline: true }
+          { name: "Discord", value: `${interaction.user.tag}`, inline: true },
+          { name: "Display Name", value: displayName, inline: true },
+          { name: "Panel Email", value: verification.user.email, inline: true },
+          { name: "Servers", value: `${serverCount}`, inline: true },
+          { name: "Member Since", value: `<t:${memberSince}:R>`, inline: true },
+          { name: "Status", value: "Fully Verified", inline: true }
         )
+        .setFooter({ text: "Minevo Panel" })
         .setTimestamp()
     ]
   };

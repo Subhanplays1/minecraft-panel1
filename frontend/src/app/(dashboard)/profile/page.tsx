@@ -1,10 +1,33 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { User, Mail, Lock, Save, Loader2, Check } from "lucide-react"
+import { useBranding } from "@/components/BrandingProvider"
+import { discord } from "@/lib/api"
+import { useRouter } from "next/navigation"
+import {
+  User, Mail, Lock, Save, Loader2, Check, Gamepad2,
+  ExternalLink, Shield, Calendar
+} from "lucide-react"
+
+interface UserData {
+  id: string
+  name: string
+  email: string
+  role: string
+  avatar: string | null
+  createdAt: string
+  discordId: string | null
+  discordUsername: string | null
+  discordDisplayName: string | null
+  discordAvatar: string | null
+  discordVerified: boolean
+  discordVerifiedAt: string | null
+}
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<{ id: string; name: string; email: string; role: string; createdAt: string } | null>(null)
+  const router = useRouter()
+  const { settings } = useBranding()
+  const [user, setUser] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -15,6 +38,7 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false)
   const [profileMsg, setProfileMsg] = useState("")
   const [passwordMsg, setPasswordMsg] = useState("")
+  const [discordStatus, setDiscordStatus] = useState<any>(null)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -25,6 +49,10 @@ export default function ProfilePage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    discord.getStatus().then(setDiscordStatus).catch(() => {})
   }, [])
 
   const saveProfile = async () => {
@@ -60,11 +88,74 @@ export default function ProfilePage() {
   if (loading) return <div className="p-6 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--brand-muted)" }} strokeWidth={1.5} /></div>
   if (!user) return null
 
+  const displayAvatar = user.discordAvatar || user.avatar
+  const displayName = user.discordDisplayName || user.name
+
   return (
     <div className="p-5 md:p-6 max-w-[600px] mx-auto">
       <div className="mb-5">
         <h1 className="text-[17px] font-semibold" style={{ color: "var(--brand-text)" }}>Profile</h1>
         <p className="text-[12px] mt-0.5" style={{ color: "var(--brand-muted)" }}>Manage your account settings</p>
+      </div>
+
+      {/* Discord Verification Card */}
+      <div className="rounded-xl mb-4 overflow-hidden" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--brand-border)" }}>
+          <Gamepad2 size={14} strokeWidth={1.5} style={{ color: "#5865F2" }} />
+          <h2 className="text-[13px] font-medium" style={{ color: "var(--brand-text)" }}>Discord</h2>
+          {user.discordVerified && (
+            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: "rgba(34,197,94,0.15)", color: "#22C55E" }}>
+              Verified
+            </span>
+          )}
+        </div>
+
+        {user.discordVerified ? (
+          <div className="p-4">
+            <div className="flex items-center gap-4 mb-4">
+              {displayAvatar && (
+                <img src={displayAvatar} alt="Discord Avatar" className="w-16 h-16 rounded-full" style={{ border: "2px solid var(--brand-border)" }} />
+              )}
+              <div>
+                <div className="text-[14px] font-semibold" style={{ color: "var(--brand-text)" }}>{displayName}</div>
+                <div className="text-[12px]" style={{ color: "var(--brand-muted)" }}>@{user.discordUsername}</div>
+                <div className="flex items-center gap-1 mt-1">
+                  <Shield size={10} style={{ color: "#22C55E" }} />
+                  <span className="text-[10px]" style={{ color: "#22C55E" }}>Fully Verified</span>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-2.5 rounded-lg" style={{ backgroundColor: "var(--brand-background)" }}>
+                <div className="text-[10px] mb-0.5" style={{ color: "var(--brand-muted)" }}>Discord ID</div>
+                <div className="text-[12px] font-mono" style={{ color: "var(--brand-text)" }}>{user.discordId}</div>
+              </div>
+              <div className="p-2.5 rounded-lg" style={{ backgroundColor: "var(--brand-background)" }}>
+                <div className="text-[10px] mb-0.5" style={{ color: "var(--brand-muted)" }}>Verified On</div>
+                <div className="text-[12px]" style={{ color: "var(--brand-text)" }}>
+                  {user.discordVerifiedAt ? new Date(user.discordVerifiedAt).toLocaleDateString() : "N/A"}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 text-center">
+            <p className="text-[12px] mb-3" style={{ color: "var(--brand-muted)" }}>
+              Link your Discord account to verify your identity and auto-sync your profile.
+            </p>
+            {discordStatus?.botReady ? (
+              <button
+                onClick={() => router.push("/discord-verify")}
+                className="px-4 py-2 rounded-lg text-[12px] font-medium flex items-center gap-2 mx-auto"
+                style={{ backgroundColor: "#5865F2", color: "#fff" }}
+              >
+                <Gamepad2 className="w-3.5 h-3.5" /> Verify with Discord
+              </button>
+            ) : (
+              <p className="text-[11px]" style={{ color: "var(--brand-muted)" }}>Discord bot is not configured yet.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Profile info */}

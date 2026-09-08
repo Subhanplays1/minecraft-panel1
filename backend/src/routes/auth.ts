@@ -122,6 +122,12 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
         avatar: true,
         emailVerified: true,
         createdAt: true,
+        discordId: true,
+        discordUsername: true,
+        discordDisplayName: true,
+        discordAvatar: true,
+        discordVerified: true,
+        discordVerifiedAt: true,
       },
     });
 

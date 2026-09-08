@@ -31,7 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string; role: string; avatar?: string | null; discordAvatar?: string | null; discordVerified?: boolean } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState<Notif[]>([]);
@@ -45,7 +45,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setMounted(true);
     const stored = localStorage.getItem("user");
     if (!stored) { router.push("/auth/login"); return; }
-    setUser(JSON.parse(stored));
+    const parsed = JSON.parse(stored);
+    setUser(parsed);
+
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((d) => { if (d.user) setUser(d.user); })
+        .catch(() => {});
+    }
   }, [router]);
 
   useEffect(() => {
@@ -205,8 +214,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {collapsed ? <ChevronRight size={14} strokeWidth={1.5} /> : <ChevronLeft size={14} strokeWidth={1.5} />}
           </button>
           <div className="px-2.5 py-2 flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ backgroundColor: "#1a1a1a", border: "1px solid #222", color: "#999" }}>
-              {user.name[0].toUpperCase()}
+            <div className="relative w-7 h-7 flex-shrink-0">
+              {(user.discordAvatar || user.avatar) ? (
+                <img src={user.discordAvatar || user.avatar || ""} alt="" className="w-7 h-7 rounded-md object-cover" style={{ border: "1px solid #222" }} />
+              ) : (
+                <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: "#1a1a1a", border: "1px solid #222", color: "#999" }}>
+                  {user.name[0].toUpperCase()}
+                </div>
+              )}
+              {user.discordVerified && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center" style={{ backgroundColor: "#22C55E", border: "1.5px solid var(--brand-sidebar)" }}>
+                  <svg width="7" height="7" viewBox="0 0 12 12" fill="none"><path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              )}
             </div>
             {!collapsed && (
               <>
