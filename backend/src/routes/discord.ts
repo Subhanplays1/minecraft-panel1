@@ -67,7 +67,9 @@ router.post("/settings", authenticate, async (req: Request, res: Response) => {
     });
 
     if (isEnabled && botToken) {
-      await initializeDiscordBot();
+      initializeDiscordBot().catch((err) => {
+        console.error("[Discord] Bot init error after save:", err);
+      });
     }
 
     res.json({ success: true, settings });
