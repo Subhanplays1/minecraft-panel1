@@ -9,7 +9,7 @@ import {
   Bell, Terminal, FileText, Link2, UserPlus, Puzzle, Archive,
   User, Activity, HelpCircle, Sliders, FolderOpen, ArrowLeft, X,
   Clock, Cpu, FileCode, Zap, Shield, Globe,
-  Moon, Sun, Loader2
+  Moon, Sun, Loader2, History, Wifi, AlertTriangle, Download, TrendingUp
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -103,6 +103,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { id: "plugins", name: "Plugins", icon: <Puzzle size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/plugins` },
     { id: "logs", name: "Logs", icon: <FileCode size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/logs` },
     { id: "resources", name: "Resources", icon: <Cpu size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/resources` },
+    { id: "timeline", name: "Timeline", icon: <History size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/timeline` },
+    { id: "uptime", name: "Uptime", icon: <Wifi size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/uptime` },
+    { id: "alerts", name: "Alerts", icon: <AlertTriangle size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/alerts` },
+    { id: "forecast", name: "Forecast", icon: <TrendingUp size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/forecast` },
+    { id: "export", name: "Export Docker", icon: <Download size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/export` },
     { id: "scheduler", name: "Scheduler", icon: <Clock size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/scheduler` },
     { id: "properties", name: "Properties", icon: <FileText size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/properties` },
     { id: "backups", name: "Backups", icon: <Archive size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/backups` },

@@ -22,12 +22,14 @@ import systemRoutes from "./routes/system";
 import webhookRoutes from "./routes/webhooks";
 import templateRoutes from "./routes/templates";
 import serverLogRoutes from "./routes/serverLogs";
+import advancedRoutes from "./routes/advanced";
 import { handleUploadError } from "./services/upload";
 import { stopLocalServer, isRunning, onCrash } from "./services/processManager";
 import { triggerWebhooks } from "./routes/webhooks";
 import { startSftpServer, stopSftpServer } from "./services/sftpServer";
 import http from "http";
 import { sendRenewalReminderDM } from "./services/discordBot";
+import { logActivity, recordUptime } from "./routes/advanced";
 
 const app = express();
 const server = http.createServer(app);
@@ -82,6 +84,7 @@ app.use("/api", systemRoutes);
 app.use("/api", webhookRoutes);
 app.use("/api", templateRoutes);
 app.use("/api", serverLogRoutes);
+app.use("/api", advancedRoutes);
 app.use("/api", serverRoutes);
 
 // Upload error handling
@@ -159,14 +162,22 @@ function startRenewalChecker() {
       const expired = await prisma.server.findMany({
         where: { renewalAt: { gt: new Date(0), lt: now }, status: { in: ["RUNNING"] } },
       });
-      for (const s of expired) {
+        for (const s of expired) {
         try {
           if (isRunning(s.id)) stopLocalServer(s.id);
           await prisma.server.update({ where: { id: s.id }, data: { status: "EXPIRED" } });
           console.log(`[Panel] Server ${s.name} expired — stopped`);
+          logActivity(s.id, "STOP", "Server stopped due to expired renewal").catch(() => {});
         } catch (e: any) {
           console.error(`[Panel] Failed to stop expired server ${s.name}: ${e.message}`);
         }
+      }
+
+      // Record uptime for all non-installing servers
+      const allServers = await prisma.server.findMany({ where: { status: { notIn: ["INSTALLING"] } } });
+      for (const s of allServers) {
+        const up = isRunning(s.id);
+        recordUptime(s.id, up ? "UP" : "DOWN").catch(() => {});
       }
 
       // Send reminders: 3 days, 1 day, and day-of expiry
@@ -225,6 +236,7 @@ async function main() {
         await prisma.server.update({ where: { id: serverId }, data: { status: "CRASHED" } });
         await prisma.crashLog.create({ data: { serverId, exitCode: exitCode ?? 0, logs } });
         triggerWebhooks("server.crash", { serverId, serverName: server.name, exitCode }).catch(() => {});
+        logActivity(serverId, "CRASH", `Server crashed with code ${exitCode}`).catch(() => {});
         console.log(`[Panel] Server ${server.name} crashed with code ${exitCode}`);
       } catch (err: any) {
         console.error(`[Panel] Crash handler error: ${err.message}`);

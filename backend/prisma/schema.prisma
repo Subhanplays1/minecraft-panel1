@@ -571,6 +571,9 @@ model Server {
   backups Backup[]
   scheduledTasks ScheduledTask[]
   crashLogs CrashLog[]
+  activityEvents ActivityEvent[]
+  uptimeRecords UptimeRecord[]
+  performanceAlerts PerformanceAlert[]
 
   @@index([userId])
   @@index([status])
@@ -762,4 +765,58 @@ model BrandPreset {
   updatedAt   DateTime @updatedAt
 
   @@index([tenantId])
+}
+
+// ============================================================
+// ACTIVITY TIMELINE
+// ============================================================
+
+model ActivityEvent {
+  id        String   @id @default(uuid())
+  serverId  String
+  type      String   // START, STOP, CRASH, INSTALL, PLUGIN_INSTALL, PLUGIN_UNINSTALL, RESTART, RENEW, CONFIG_CHANGE, NOTE
+  message   String?
+  meta      String?  // JSON blob for extra data
+  createdAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// UPTIME RECORDS
+// ============================================================
+
+model UptimeRecord {
+  id         String   @id @default(uuid())
+  serverId   String
+  status     String   // UP, DOWN
+  responseMs Int?
+  checkedAt  DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@index([checkedAt])
+}
+
+// ============================================================
+// PERFORMANCE ALERTS
+// ============================================================
+
+model PerformanceAlert {
+  id         String   @id @default(uuid())
+  serverId   String
+  type       String   // HIGH_RAM, LOW_TPS, CRASH, HIGH_CPU, HIGH_DISK
+  threshold  Float
+  enabled    Boolean  @default(true)
+  lastFired  DateTime?
+  cooldownM  Int      @default(30) // minutes between alerts
+  createdAt  DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
 }

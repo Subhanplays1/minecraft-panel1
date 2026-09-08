@@ -13,6 +13,7 @@ import {
   getServerLogs, getServerPath,
 } from "../services/processManager";
 import { sendServerInvoiceDM } from "../services/discordBot";
+import { logActivity } from "./advanced";
 import { triggerWebhooks } from "./webhooks";
 
 const router = Router();
@@ -306,6 +307,7 @@ router.post("/servers/:id/start", authenticate, async (req: Request, res: Respon
 
     await prisma.server.update({ where: { id: server.id }, data: { status: "RUNNING" } });
     triggerWebhooks("server.start", { serverId: server.id, serverName: server.name }).catch(() => {});
+    logActivity(server.id, "START", `Server started`).catch(() => {});
     return res.json({ message: "Server started" });
   } catch (error: any) {
     console.error("Start server error:", error);
@@ -323,6 +325,7 @@ router.post("/servers/:id/stop", authenticate, async (req: Request, res: Respons
     stopLocalServer(server.id);
     await prisma.server.update({ where: { id: server.id }, data: { status: "STOPPED" } });
     triggerWebhooks("server.stop", { serverId: server.id, serverName: server.name }).catch(() => {});
+    logActivity(server.id, "STOP", `Server stopped`).catch(() => {});
     return res.json({ message: "Server stopped" });
   } catch (error) {
     console.error("Stop server error:", error);
@@ -348,6 +351,7 @@ router.post("/servers/:id/restart", authenticate, async (req: Request, res: Resp
       startupCmd: server.startupCmd || undefined,
     });
     await prisma.server.update({ where: { id: server.id }, data: { status: "RUNNING" } });
+    logActivity(server.id, "RESTART", `Server restarted`).catch(() => {});
     return res.json({ message: "Server restarted" });
   } catch (error: any) {
     console.error("Restart server error:", error);
