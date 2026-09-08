@@ -158,7 +158,7 @@ export default function DiscordVerifyPage() {
               </button>
             </div>
             <p className="text-xs text-center" style={{ color: "var(--brand-muted)" }}>
-              You'll receive the code via Discord DM from the Minevo bot
+              You'll receive the code via Discord DM. Use <code className="font-mono">/verify</code> in the verification channel.
             </p>
           </div>
         )}
@@ -197,8 +197,8 @@ export default function DiscordVerifyPage() {
                 <span className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>How to verify</span>
               </div>
               <ol className="text-sm space-y-1" style={{ color: "var(--brand-muted)" }}>
-                <li className="flex items-center gap-2"><span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: primaryColor, color: "#080808" }}>1</span> Open Discord and check your DMs from Minevo bot</li>
-                <li className="flex items-center gap-2"><span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: primaryColor, color: "#080808" }}>2</span> Type <code className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ backgroundColor: "var(--brand-background)" }}>`!verify {code}`</code></li>
+                <li className="flex items-center gap-2"><span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: primaryColor, color: "#080808" }}>1</span> Go to the verification channel in Discord</li>
+                <li className="flex items-center gap-2"><span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: primaryColor, color: "#080808" }}>2</span> Type <code className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ backgroundColor: "var(--brand-background)" }}>`/verify code:{code}`</code></li>
                 <li className="flex items-center gap-2"><span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: primaryColor, color: "#080808" }}>3</span> Click "Check Verification" below</li>
               </ol>
             </div>

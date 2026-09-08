@@ -79,8 +79,9 @@ export default function AdminDiscordPage() {
       await discord.updateSettings(settings, token)
       toast.success("Discord settings saved!")
       loadSettings()
-    } catch {
-      toast.error("Failed to save")
+    } catch (e: any) {
+      console.error("Discord save error:", e)
+      toast.error("Failed to save: " + (e.message || "Unknown error"))
     } finally {
       setSaving(false)
     }

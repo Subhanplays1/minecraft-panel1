@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, EmbedBuilder, TextChannel, DMChannel } from "discord.js";
+import { Client, GatewayIntentBits, Events, EmbedBuilder, TextChannel, DMChannel, SlashCommandBuilder, InteractionEditReplyOptions } from "discord.js";
 import { prisma } from "../utils/prisma";
 
 let discordClient: Client | null = null;
@@ -10,6 +10,90 @@ export function getDiscordClient(): Client | null {
 
 export function isDiscordReady(): boolean {
   return isReady && discordClient?.isReady() === true;
+}
+
+async function handleVerify(code: string, interaction: any, settings: any): Promise<InteractionEditReplyOptions> {
+  if (!code) {
+    return { content: "Usage: `/verify <CODE>`" };
+  }
+
+  const upperCode = code.toUpperCase();
+
+  const verification = await prisma.discordVerification.findUnique({
+    where: { code: upperCode },
+    include: { user: true }
+  });
+
+  if (!verification) {
+    return { content: "Invalid verification code." };
+  }
+
+  if (verification.status !== "PENDING") {
+    return { content: "This code has already been used or expired." };
+  }
+
+  if (verification.expiresAt < new Date()) {
+    await prisma.discordVerification.update({
+      where: { id: verification.id },
+      data: { status: "EXPIRED" }
+    });
+    return { content: "This verification code has expired. Please generate a new one on the panel." };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.discordVerification.update({
+      where: { id: verification.id },
+      data: {
+        status: "VERIFIED",
+        discordUserId: interaction.user.id,
+        discordUsername: interaction.user.tag,
+        verifiedAt: new Date(),
+      }
+    });
+
+    await tx.user.update({
+      where: { id: verification.userId },
+      data: {
+        discordId: interaction.user.id,
+        discordUsername: interaction.user.tag,
+        discordAvatar: interaction.user.avatar ? interaction.user.displayAvatarURL() : null,
+        discordVerified: true,
+        discordVerifiedAt: new Date(),
+        verificationCode: null,
+        verificationCodeExpires: null,
+      }
+    });
+  });
+
+  if (settings.logChannelId && discordClient) {
+    const logChannel = discordClient.channels.cache.get(settings.logChannelId) as TextChannel;
+    if (logChannel) {
+      const logEmbed = new EmbedBuilder()
+        .setTitle("New Discord Verification")
+        .setColor(0x3B82F6)
+        .addFields(
+          { name: "User", value: `<@${interaction.user.id}> (${interaction.user.tag})`, inline: true },
+          { name: "Panel User", value: verification.user.email, inline: true },
+          { name: "Code", value: `\`${upperCode}\``, inline: true }
+        )
+        .setTimestamp();
+      await logChannel.send({ embeds: [logEmbed] });
+    }
+  }
+
+  return {
+    embeds: [
+      new EmbedBuilder()
+        .setTitle("Verification Successful")
+        .setDescription("Your Discord account has been linked to your Minevo account!")
+        .setColor(0x22C55E)
+        .addFields(
+          { name: "Discord", value: interaction.user.tag, inline: true },
+          { name: "Status", value: "Verified", inline: true }
+        )
+        .setTimestamp()
+    ]
+  };
 }
 
 export async function initializeDiscordBot(): Promise<void> {
@@ -31,99 +115,72 @@ export async function initializeDiscordBot(): Promise<void> {
     ],
   });
 
-  discordClient.once(Events.ClientReady, () => {
+  discordClient.once(Events.ClientReady, async (client) => {
     isReady = true;
-    console.log(`[Discord] Bot logged in as ${discordClient?.user?.tag}`);
+    console.log(`[Discord] Bot logged in as ${client.user.tag}`);
+
+    try {
+      const verifyCommand = new SlashCommandBuilder()
+        .setName("verify")
+        .setDescription("Verify your Minevo account")
+        .addStringOption(option =>
+          option.setName("code")
+            .setDescription("Your verification code")
+            .setRequired(true)
+        );
+
+      await client.application.commands.create(verifyCommand);
+      console.log("[Discord] /verify slash command registered");
+    } catch (error) {
+      console.error("[Discord] Failed to register slash command:", error);
+    }
+  });
+
+  discordClient.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+    if (interaction.commandName !== "verify") return;
+
+    const code = interaction.options.getString("code") || "";
+
+    if (settings.verificationChannelId && interaction.channelId !== settings.verificationChannelId) {
+      const embed = new EmbedBuilder()
+        .setDescription(`Please use the <#${settings.verificationChannelId}> channel to verify your account.`)
+        .setColor(0xF59E0B);
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+      return;
+    }
+
+    await interaction.deferReply();
+
+    const reply = await handleVerify(code, interaction, settings);
+
+    try {
+      await interaction.editReply(reply);
+    } catch (error) {
+      console.error("[Discord] Failed to reply to interaction:", error);
+    }
+
+    if (settings.verificationChannelId && interaction.channelId === settings.verificationChannelId) {
+      try {
+        await interaction.deleteReply();
+      } catch {}
+    }
   });
 
   discordClient.on(Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
-    if (!(message.channel instanceof DMChannel)) return;
+    if (message.channel instanceof DMChannel) return;
 
-    const content = message.content.trim();
-    if (!content.startsWith("!verify ")) return;
-
-    const code = content.slice(8).trim().toUpperCase();
-    if (!code) {
-      await message.reply("Usage: `!verify <CODE>`");
+    if (settings.verificationChannelId && message.channelId === settings.verificationChannelId) {
+      try { await message.delete(); } catch {}
+      const embed = new EmbedBuilder()
+        .setDescription("Please use the `/verify` slash command to verify your account. Type `/verify` and enter your code.")
+        .setColor(0x6366F1);
+      try {
+        const reply = await message.channel.send({ embeds: [embed] });
+        setTimeout(() => { reply.delete().catch(() => {}); }, 5000);
+      } catch {}
       return;
-    }
-
-    const verification = await prisma.discordVerification.findUnique({
-      where: { code },
-      include: { user: true }
-    });
-
-    if (!verification) {
-      await message.reply("❌ Invalid verification code.");
-      return;
-    }
-
-    if (verification.status !== "PENDING") {
-      await message.reply("❌ This code has already been used or expired.");
-      return;
-    }
-
-    if (verification.expiresAt < new Date()) {
-      await prisma.discordVerification.update({
-        where: { id: verification.id },
-        data: { status: "EXPIRED" }
-      });
-      await message.reply("❌ This verification code has expired.");
-      return;
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.discordVerification.update({
-        where: { id: verification.id },
-        data: {
-          status: "VERIFIED",
-          discordUserId: message.author.id,
-          discordUsername: message.author.tag,
-          verifiedAt: new Date(),
-        }
-      });
-
-      await tx.user.update({
-        where: { id: verification.userId },
-        data: {
-          discordId: message.author.id,
-          discordUsername: message.author.tag,
-          discordAvatar: message.author.avatar ? message.author.avatarURL() : null,
-          discordVerified: true,
-          discordVerifiedAt: new Date(),
-          verificationCode: null,
-          verificationCodeExpires: null,
-        }
-      });
-    });
-
-    const embed = new EmbedBuilder()
-      .setTitle("✅ Verification Successful")
-      .setDescription("Your Discord account has been linked to your Minevo account!")
-      .setColor(0x22C55E)
-      .addFields(
-        { name: "Discord", value: message.author.tag, inline: true },
-        { name: "Status", value: "Verified", inline: true }
-      )
-      .setTimestamp();
-
-    await message.reply({ embeds: [embed] });
-
-    if (settings.logChannelId && discordClient) {
-      const logChannel = discordClient.channels.cache.get(settings.logChannelId) as TextChannel;
-      if (logChannel) {
-        const logEmbed = new EmbedBuilder()
-          .setTitle("🔗 New Discord Verification")
-          .setColor(0x3B82F6)
-          .addFields(
-            { name: "User", value: `<@${message.author.id}> (${message.author.tag})`, inline: true },
-            { name: "Panel User", value: verification.user.email, inline: true },
-            { name: "Code", value: `\`${code}\``, inline: true }
-          )
-          .setTimestamp();
-        await logChannel.send({ embeds: [logEmbed] });
-      }
     }
   });
 
@@ -145,12 +202,12 @@ export async function sendVerificationDM(discordUserId: string, code: string, pa
   try {
     const user = await discordClient.users.fetch(discordUserId);
     const embed = new EmbedBuilder()
-      .setTitle("🔐 Minevo Verification Code")
+      .setTitle("Minevo Verification Code")
       .setDescription("Use this code to verify your Discord account on the panel.")
       .setColor(0x6366F1)
       .addFields(
         { name: "Verification Code", value: `\`${code}\``, inline: false },
-        { name: "Instructions", value: `Send \`!verify ${code}\` in this DM to complete verification.`, inline: false },
+        { name: "Instructions", value: `Use the slash command \`/verify code:${code}\` in the verification channel to complete verification.`, inline: false },
         { name: "Expires", value: "10 minutes", inline: true }
       )
       .setFooter({ text: "Minevo Panel" })
@@ -182,7 +239,7 @@ export async function sendServerInvoiceDM(
   try {
     const user = await discordClient.users.fetch(discordUserId);
     const embed = new EmbedBuilder()
-      .setTitle("📄 Server Created - Invoice")
+      .setTitle("Server Created - Invoice")
       .setDescription(`Your server **${serverName}** has been created successfully!`)
       .setColor(0x22C55E)
       .addFields(
@@ -193,7 +250,7 @@ export async function sendServerInvoiceDM(
         { name: "Amount", value: `${invoiceData.amount} ${invoiceData.currency}`, inline: true },
         { name: "Renewal Date", value: `<t:${Math.floor(invoiceData.renewalDate.getTime() / 1000)}:F>`, inline: true }
       )
-      .setFooter({ text: "Minevo Panel • Keep this for your records" })
+      .setFooter({ text: "Minevo Panel - Keep this for your records" })
       .setTimestamp();
 
     await user.send({ embeds: [embed] });
@@ -216,7 +273,7 @@ export async function sendRenewalReminderDM(
   try {
     const user = await discordClient.users.fetch(discordUserId);
     const embed = new EmbedBuilder()
-      .setTitle("⏰ Server Renewal Reminder")
+      .setTitle("Server Renewal Reminder")
       .setDescription(`Your server **${serverName}** is due for renewal.`)
       .setColor(0xEAB308)
       .addFields(
