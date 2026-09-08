@@ -26,8 +26,10 @@ import { handleUploadError } from "./services/upload";
 import { stopLocalServer, isRunning, onCrash } from "./services/processManager";
 import { triggerWebhooks } from "./routes/webhooks";
 import { startSftpServer, stopSftpServer } from "./services/sftpServer";
+import http from "http";
 
 const app = express();
+const server = http.createServer(app);
 const PORT = parseInt(process.env.PORT || "3001");
 
 // Trust proxy (required behind reverse proxies for rate limiting)
@@ -96,8 +98,19 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 // Graceful shutdown - stop all running servers
+let shuttingDown = false;
 async function gracefulShutdown(signal: string) {
+  if (shuttingDown) process.exit(1);
+  shuttingDown = true;
   console.log(`\n[Panel] Received ${signal}. Stopping all running servers...`);
+
+  // Force exit after 5 seconds if graceful shutdown hangs
+  const forceExit = setTimeout(() => {
+    console.log("[Panel] Forced exit (timeout).");
+    process.exit(1);
+  }, 5000);
+  forceExit.unref();
+
   try {
     const runningServers = await prisma.server.findMany({ where: { status: "RUNNING" } });
     for (const server of runningServers) {
@@ -111,8 +124,15 @@ async function gracefulShutdown(signal: string) {
       }
     }
     // Mark all as STOPPED in DB
-    await prisma.server.updateMany({ where: { status: "RUNNING" }, data: { status: "STOPPED" } });
+    await prisma.server.updateMany({ where: { status: { in: ["RUNNING", "STARTING", "STOPPING"] } }, data: { status: "STOPPED" } });
     stopSftpServer();
+    console.log("[Panel] SFTP stopped.");
+
+    // Close HTTP server
+    server.close(() => {
+      console.log("[Panel] HTTP server closed.");
+    });
+
     console.log("[Panel] All servers stopped.");
   } catch (e: any) {
     console.error("[Panel] Shutdown error:", e.message);
@@ -123,12 +143,6 @@ async function gracefulShutdown(signal: string) {
 
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-process.on("exit", () => {
-  // Synchronous fallback - mark servers as stopped in DB
-  try {
-    execSync(`npx prisma db push --skip-generate`, { cwd: __dirname + "/..", stdio: "pipe" });
-  } catch {}
-});
 
 // Auto-setup database and start server
 async function main() {
@@ -179,7 +193,7 @@ async function main() {
     // Initialize Discord bot
     await initializeDiscordBot();
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`API: http://localhost:${PORT}/api`);
       console.log(`Health: http://localhost:${PORT}/api/health`);
