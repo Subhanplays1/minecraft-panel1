@@ -8,6 +8,7 @@ import toast from "react-hot-toast"
 interface ServerInfo {
   id: string; name: string; status: string; software: string; mcVersion: string
   ram: number; cpu: number; disk: number; port: number; ip: string | null
+  notes: string | null
 }
 
 export default function ServerSettingsPage() {
@@ -22,12 +23,13 @@ export default function ServerSettingsPage() {
   const [ram, setRam] = useState(2048)
   const [cpu, setCpu] = useState(100)
   const [port, setPort] = useState(25565)
+  const [notes, setNotes] = useState("")
 
   useEffect(() => {
     const token = localStorage.getItem("token")
     fetch(`/api/servers/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json()).then((d) => {
-        setServer(d); setName(d.name); setRam(d.ram); setCpu(d.cpu); setPort(d.port)
+        setServer(d); setName(d.name); setRam(d.ram); setCpu(d.cpu); setPort(d.port); setNotes(d.notes || "")
         setLoading(false)
       }).catch(() => setLoading(false))
   }, [id])
@@ -39,7 +41,7 @@ export default function ServerSettingsPage() {
       const res = await fetch(`/api/servers/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name, ram, cpu, port }),
+        body: JSON.stringify({ name, ram, cpu, port, notes }),
       })
       if (res.ok) { toast.success("Settings saved") } else { toast.error("Failed to save") }
     } catch { toast.error("Failed to save") } finally { setSaving(false) }
@@ -109,6 +111,19 @@ export default function ServerSettingsPage() {
               <input value={server.status} disabled className="w-full px-3 py-2 rounded-lg text-sm opacity-50" style={{ backgroundColor: "var(--brand-background)", border: "1px solid var(--brand-border)", color: "var(--brand-text)" }} />
             </div>
           </div>
+        </div>
+
+        {/* Notes */}
+        <div className="rounded-xl p-5 animate-fade-in-up delay-150" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
+          <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--brand-text)" }}>Notes</h2>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Private notes about this server..."
+            rows={4}
+            className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
+            style={{ backgroundColor: "var(--brand-background)", border: "1px solid var(--brand-border)", color: "var(--brand-text)" }}
+          />
         </div>
 
         <button onClick={saveSettings} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all hover-lift disabled:opacity-50" style={{ backgroundColor: "var(--brand-primary)", color: "white" }}>

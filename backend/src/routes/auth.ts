@@ -1,5 +1,7 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import * as OTPAuth from "otpauth";
 import { prisma } from "../utils/prisma";
 import { authenticate, generateToken } from "../middleware/auth";
 import { validate, loginSchema, registerSchema } from "../middleware/validation";
@@ -23,6 +25,16 @@ router.post("/login", validate(loginSchema), async (req: Request, res: Response)
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Check if 2FA is enabled
+    if (user.twoFactorEnabled && user.totpSecret) {
+      const tempToken = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role, temp: true },
+        process.env.JWT_SECRET || "dev-secret",
+        { expiresIn: "5m" }
+      );
+      return res.json({ requires2FA: true, tempToken });
     }
 
     // Update login info
@@ -56,6 +68,83 @@ router.post("/login", validate(loginSchema), async (req: Request, res: Response)
     });
   } catch (error) {
     console.error("Login error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/auth/login/2fa
+router.post("/login/2fa", async (req: Request, res: Response) => {
+  try {
+    const { tempToken, code } = req.body;
+    if (!tempToken || !code) {
+      return res.status(400).json({ error: "TempToken and code are required" });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_SECRET || "dev-secret") as {
+        userId: string;
+        email: string;
+        role: string;
+        temp: boolean;
+      };
+    } catch {
+      return res.status(401).json({ error: "Invalid or expired temp token" });
+    }
+
+    if (!decoded.temp) {
+      return res.status(400).json({ error: "Invalid token type" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    if (!user || !user.totpSecret || !user.twoFactorEnabled) {
+      return res.status(400).json({ error: "2FA is not configured" });
+    }
+
+    const totp = new OTPAuth.TOTP({
+      issuer: "MineVo",
+      label: user.email,
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(user.totpSecret),
+    });
+
+    const delta = totp.validate({ token: code, window: 1 });
+    if (delta === null) {
+      return res.status(400).json({ error: "Invalid code" });
+    }
+
+    // Update login info
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), loginCount: { increment: 1 } },
+    });
+
+    const token = generateToken(user);
+
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        token,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        avatar: user.avatar,
+      },
+    });
+  } catch (error) {
+    console.error("2FA login error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

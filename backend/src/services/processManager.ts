@@ -7,6 +7,11 @@ import { downloadJar } from "./jarDownloader";
 const processes = new Map<string, ChildProcess>();
 const serverStartedAt = new Map<string, string>();
 const logStreams = new Map<string, fs.WriteStream>();
+const crashCallbacks: Array<(serverId: string, exitCode: number | null, logs: string) => void> = [];
+
+export function onCrash(cb: (serverId: string, exitCode: number | null, logs: string) => void) {
+  crashCallbacks.push(cb);
+}
 
 export function resolveJavaBinary(): string | null {
   const candidates = [
@@ -215,6 +220,13 @@ export function startLocalServer(id: string, serverData: {
     logMessage(`Server exited with code ${code}`);
     processes.delete(id);
     serverStartedAt.delete(id);
+    // Detect crash (non-zero exit)
+    if (code !== 0 && code !== null) {
+      const crashLogs = getServerLogs(id).slice(-100).join("\n");
+      for (const cb of crashCallbacks) {
+        try { cb(id, code, crashLogs); } catch {}
+      }
+    }
   });
 
   child.stdout?.on("data", (data: Buffer) => {

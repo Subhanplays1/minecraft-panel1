@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Palette, Navigation, Flag, Mail, Bell, Wrench,
-  MessageCircle, Settings, Gamepad2
+  MessageCircle, Settings, Gamepad2, Activity, Webhook
 } from "lucide-react";
 
 const SETTINGS_NAV = [
@@ -17,6 +17,8 @@ const SETTINGS_NAV = [
   { href: "/admin/settings/announcements", label: "Announcements", icon: <Bell size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/social", label: "Social Links", icon: <MessageCircle size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/maintenance", label: "Maintenance", icon: <Wrench size={15} strokeWidth={1.5} /> },
+  { href: "/admin/health", label: "System Health", icon: <Activity size={15} strokeWidth={1.5} /> },
+  { href: "/admin/webhooks", label: "Webhooks", icon: <Webhook size={15} strokeWidth={1.5} /> },
 ];
 
 export default function AdminSettingsLayout({ children }: { children: React.ReactNode }) {

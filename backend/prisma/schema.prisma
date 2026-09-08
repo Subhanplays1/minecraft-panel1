@@ -23,6 +23,7 @@ model User {
   emailVerified Boolean   @default(false)
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String?
+  totpSecret       String?
   banned        Boolean   @default(false)
   banReason     String?
   lastLoginAt   DateTime?
@@ -558,12 +559,15 @@ model Server {
   planId      String?
   startupCmd  String?
   autoStart   Boolean   @default(false)
+  notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   node Node?   @relation(fields: [nodeId], references: [id], onDelete: SetNull)
   backups Backup[]
+  scheduledTasks ScheduledTask[]
+  crashLogs CrashLog[]
 
   @@index([userId])
   @@index([status])
@@ -586,6 +590,67 @@ model Backup {
 
   @@index([serverId])
 }
+
+// ============================================================
+// SCHEDULER
+// ============================================================
+
+model ScheduledTask {
+  id          String   @id @default(uuid())
+  serverId    String
+  name        String
+  type        String   // RESTART, STOP, START, COMMAND, BACKUP
+  command     String?  // for COMMAND type
+  cronExpr    String   // e.g. "0 4 * * *" for daily at 4am
+  isEnabled   Boolean  @default(true)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+}
+
+// ============================================================
+// WEBHOOKS
+// ============================================================
+
+model Webhook {
+  id         String   @id @default(uuid())
+  url        String
+  events     String   @default("[\"server.start\",\"server.stop\",\"server.crash\"]")
+  isEnabled  Boolean  @default(true)
+  secret     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isEnabled])
+}
+
+// ============================================================
+// CRASH LOGS
+// ============================================================
+
+model CrashLog {
+  id        String   @id @default(uuid())
+  serverId  String
+  exitCode  Int?
+  logs      String   @default("")
+  createdAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// SERVER NOTES
+// ============================================================
+
+// notes field added to Server model below
 
 // ============================================================
 // NOTIFICATIONS

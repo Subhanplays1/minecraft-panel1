@@ -8,6 +8,7 @@ import {
   LayoutDashboard, Server, Users, Network, Settings, LogOut, ChevronLeft, ChevronRight,
   Bell, Terminal, FileText, Link2, UserPlus, Puzzle, Archive,
   User, Activity, HelpCircle, Sliders, FolderOpen, ArrowLeft, X,
+  Clock, Cpu, FileCode, Zap, Shield, Globe,
   Moon, Sun, Loader2
 } from "lucide-react";
 
@@ -100,6 +101,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { id: "console", name: "Console", icon: <Terminal size={16} strokeWidth={1.5} />, url: `/servers/${serverId}` },
     { id: "files", name: "Files", icon: <FolderOpen size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/files` },
     { id: "plugins", name: "Plugins", icon: <Puzzle size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/plugins` },
+    { id: "logs", name: "Logs", icon: <FileCode size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/logs` },
+    { id: "resources", name: "Resources", icon: <Cpu size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/resources` },
+    { id: "scheduler", name: "Scheduler", icon: <Clock size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/scheduler` },
     { id: "properties", name: "Properties", icon: <FileText size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/properties` },
     { id: "backups", name: "Backups", icon: <Archive size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/backups` },
     { id: "users", name: "Users", icon: <UserPlus size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/users` },

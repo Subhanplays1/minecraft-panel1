@@ -13,11 +13,18 @@ import { existsSync, mkdirSync } from "fs";
 import { prisma } from "./utils/prisma";
 import { randomBytes } from "crypto";
 import authRoutes from "./routes/auth";
+import twoFactorRoutes from "./routes/twoFactor";
 import brandingRoutes from "./routes/branding";
 import serverRoutes from "./routes/servers";
 import { discordRouter, initializeDiscordBot } from "./routes/discord";
+import schedulerRoutes, { startScheduler } from "./routes/scheduler";
+import systemRoutes from "./routes/system";
+import webhookRoutes from "./routes/webhooks";
+import templateRoutes from "./routes/templates";
+import serverLogRoutes from "./routes/serverLogs";
 import { handleUploadError } from "./services/upload";
-import { stopLocalServer, isRunning } from "./services/processManager";
+import { stopLocalServer, isRunning, onCrash } from "./services/processManager";
+import { triggerWebhooks } from "./routes/webhooks";
 import { startSftpServer, stopSftpServer } from "./services/sftpServer";
 
 const app = express();
@@ -45,7 +52,10 @@ const limiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 app.use("/api/auth/login", limiter);
+app.use("/api/auth/login/2fa", limiter);
 app.use("/api/auth/register", limiter);
+app.use("/api/auth/2fa/verify", limiter);
+app.use("/api/auth/2fa/disable", limiter);
 
 // Body parsing
 app.use(express.json({ limit: "2mb" }));
@@ -61,8 +71,14 @@ app.use("/servers", express.static(serversDir, { maxAge: "1h" }));
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/auth/2fa", twoFactorRoutes);
 app.use("/api/branding", brandingRoutes);
 app.use("/api/discord", discordRouter);
+app.use("/api", schedulerRoutes);
+app.use("/api", systemRoutes);
+app.use("/api", webhookRoutes);
+app.use("/api", templateRoutes);
+app.use("/api", serverLogRoutes);
 app.use("/api", serverRoutes);
 
 // Upload error handling
@@ -134,6 +150,20 @@ async function main() {
     await prisma.$connect();
     console.log("Database connected");
 
+    // Register crash detection callback
+    onCrash(async (serverId, exitCode, logs) => {
+      try {
+        const server = await prisma.server.findUnique({ where: { id: serverId } });
+        if (!server) return;
+        await prisma.server.update({ where: { id: serverId }, data: { status: "CRASHED" } });
+        await prisma.crashLog.create({ data: { serverId, exitCode: exitCode ?? 0, logs } });
+        triggerWebhooks("server.crash", { serverId, serverName: server.name, exitCode }).catch(() => {});
+        console.log(`[Panel] Server ${server.name} crashed with code ${exitCode}`);
+      } catch (err: any) {
+        console.error(`[Panel] Crash handler error: ${err.message}`);
+      }
+    });
+
     // Reset all servers to STOPPED on startup (they were killed when backend died)
     const resetResult = await prisma.server.updateMany({
       where: { status: { in: ["RUNNING", "STARTING", "RESTARTING"] } },
@@ -154,6 +184,7 @@ async function main() {
       console.log(`API: http://localhost:${PORT}/api`);
       console.log(`Health: http://localhost:${PORT}/api/health`);
       startSftpServer();
+      startScheduler();
     });
   } catch (error) {
     console.error("Failed to start server:", error);

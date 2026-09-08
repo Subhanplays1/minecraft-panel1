@@ -6,7 +6,7 @@ import { discord } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import {
   User, Mail, Lock, Save, Loader2, Check, Gamepad2,
-  ExternalLink, Shield, Calendar
+  ExternalLink, Shield, Calendar, Smartphone, QrCode
 } from "lucide-react"
 
 interface UserData {
@@ -39,6 +39,13 @@ export default function ProfilePage() {
   const [profileMsg, setProfileMsg] = useState("")
   const [passwordMsg, setPasswordMsg] = useState("")
   const [discordStatus, setDiscordStatus] = useState<any>(null)
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false)
+  const [twoFAConfigured, setTwoFAConfigured] = useState(false)
+  const [twoFASetup, setTwoFASetup] = useState<{ secret: string; qrCode: string; otpauthUrl: string } | null>(null)
+  const [twoFACode, setTwoFACode] = useState("")
+  const [twoFAAction, setTwoFAAction] = useState<"setup" | "disable">("setup")
+  const [saving2FA, setSaving2FA] = useState(false)
+  const [twoFAMsg, setTwoFAMsg] = useState("")
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -54,6 +61,45 @@ export default function ProfilePage() {
   useEffect(() => {
     discord.getStatus().then(setDiscordStatus).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    fetch("/api/auth/2fa/status", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => { setTwoFAEnabled(d.enabled); setTwoFAConfigured(d.configured); })
+      .catch(() => {})
+  }, [])
+
+  const setup2FA = async () => {
+    setSaving2FA(true); setTwoFAMsg("")
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch("/api/auth/2fa/setup", { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      const d = await res.json()
+      setTwoFASetup(d)
+      setTwoFAAction("setup")
+    } catch { setTwoFAMsg("Failed to setup 2FA") }
+    finally { setSaving2FA(false) }
+  }
+
+  const verify2FA = async () => {
+    setSaving2FA(true); setTwoFAMsg("")
+    try {
+      const token = localStorage.getItem("token")
+      const endpoint = twoFAAction === "setup" ? "/api/auth/2fa/verify" : "/api/auth/2fa/disable"
+      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ code: twoFACode }) })
+      const d = await res.json()
+      if (d.success) {
+        setTwoFAEnabled(twoFAAction === "setup")
+        setTwoFASetup(null)
+        setTwoFACode("")
+        setTwoFAMsg(twoFAAction === "setup" ? "2FA enabled successfully" : "2FA disabled")
+      } else {
+        setTwoFAMsg(d.error || "Invalid code")
+      }
+    } catch { setTwoFAMsg("Failed to verify code") }
+    finally { setSaving2FA(false) }
+  }
 
   const saveProfile = async () => {
     setSavingProfile(true); setProfileMsg("")
@@ -211,6 +257,74 @@ export default function ProfilePage() {
             {savingPassword ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2} /> : <Lock className="w-3.5 h-3.5" strokeWidth={2} />} Update Password
           </button>
           {passwordMsg && <span className="text-[11px]" style={{ color: "var(--brand-text)" }}>{passwordMsg}</span>}
+        </div>
+      </div>
+
+      {/* Two-Factor Authentication */}
+      <div className="rounded-xl" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--brand-border)" }}>
+          <Smartphone size={14} strokeWidth={1.5} style={{ color: "var(--brand-muted)" }} />
+          <h2 className="text-[13px] font-medium" style={{ color: "var(--brand-text)" }}>Two-Factor Authentication</h2>
+          {twoFAEnabled && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "rgba(34,197,94,0.15)", color: "#22C55E" }}>Enabled</span>
+          )}
+        </div>
+        <div className="p-4">
+          {!twoFASetup ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[12px]" style={{ color: "var(--brand-text)" }}>
+                  {twoFAEnabled ? "Two-factor authentication is enabled. Your account is extra secure." : "Add an extra layer of security to your account."}
+                </p>
+                <p className="text-[11px] mt-1" style={{ color: "var(--brand-muted)" }}>
+                  {twoFAEnabled ? "You'll need your authenticator app code when logging in." : "Use an authenticator app like Google Authenticator or Authy."}
+                </p>
+              </div>
+              {twoFAEnabled ? (
+                <button onClick={() => { setTwoFAAction("disable"); setTwoFAMsg(""); setTwoFACode("") }} className="btn-secondary text-[11px]">
+                  <Shield className="w-3 h-3" strokeWidth={2} /> Disable
+                </button>
+              ) : (
+                <button onClick={setup2FA} disabled={saving2FA} className="btn-primary text-[11px] disabled:opacity-40">
+                  {saving2FA ? <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} /> : <Shield className="w-3 h-3" strokeWidth={2} />} Enable 2FA
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[12px]" style={{ color: "var(--brand-text)" }}>
+                {twoFAAction === "setup" ? "Scan this QR code with your authenticator app:" : "Enter your current 2FA code to disable:"}
+              </p>
+              {twoFAAction === "setup" && twoFASetup?.qrCode && (
+                <div className="flex justify-center py-3">
+                  <img src={twoFASetup.qrCode} alt="2FA QR Code" className="rounded-lg" style={{ border: "2px solid var(--brand-border)" }} width={180} height={180} />
+                </div>
+              )}
+              {twoFAAction === "setup" && twoFASetup?.secret && (
+                <div className="text-center">
+                  <p className="text-[10px] mb-1" style={{ color: "var(--brand-muted)" }}>Or enter this code manually:</p>
+                  <code className="text-[13px] font-mono px-3 py-1.5 rounded" style={{ backgroundColor: "#0a0a0a", color: "var(--brand-text)", border: "1px solid var(--brand-border)" }}>
+                    {twoFASetup.secret}
+                  </code>
+                </div>
+              )}
+              <div className="flex gap-2 items-center">
+                <input
+                  value={twoFACode}
+                  onChange={(e) => setTwoFACode(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  className="input text-[13px] font-mono text-center"
+                  maxLength={6}
+                  style={{ width: "160px" }}
+                />
+                <button onClick={verify2FA} disabled={saving2FA || twoFACode.length !== 6} className="btn-primary text-[11px] disabled:opacity-40">
+                  {saving2FA ? <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} /> : <Check className="w-3 h-3" strokeWidth={2} />} Verify
+                </button>
+                <button onClick={() => { setTwoFASetup(null); setTwoFACode("") }} className="btn-ghost text-[11px]">Cancel</button>
+              </div>
+              {twoFAMsg && <p className="text-[11px]" style={{ color: twoFAMsg.includes("success") || twoFAMsg.includes("Enabled") || twoFAMsg.includes("Disabled") ? "#22C55E" : "var(--brand-muted)" }}>{twoFAMsg}</p>}
+            </div>
+          )}
         </div>
       </div>
     </div>

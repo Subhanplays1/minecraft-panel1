@@ -13,6 +13,7 @@ import {
   getServerLogs, getServerPath,
 } from "../services/processManager";
 import { sendServerInvoiceDM } from "../services/discordBot";
+import { triggerWebhooks } from "./webhooks";
 
 const router = Router();
 
@@ -85,7 +86,7 @@ router.get("/servers", authenticate, async (req: Request, res: Response) => {
 
 router.post("/servers", authenticate, async (req: Request, res: Response) => {
   try {
-    const { name, software, mcVersion, ram, cpu, disk, nodeId, startupCmd } = req.body;
+    const { name, software, mcVersion, ram, cpu, disk, nodeId, startupCmd, notes } = req.body;
 
     if (!name || name.trim().length < 3) {
       return res.status(400).json({ error: "Server name must be at least 3 characters" });
@@ -169,6 +170,7 @@ router.post("/servers", authenticate, async (req: Request, res: Response) => {
         ip: "127.0.0.1",
         status: "INSTALLING",
         startupCmd: startupCmd || null,
+        notes: notes || null,
       },
     });
 
@@ -292,6 +294,7 @@ router.post("/servers/:id/start", authenticate, async (req: Request, res: Respon
     });
 
     await prisma.server.update({ where: { id: server.id }, data: { status: "RUNNING" } });
+    triggerWebhooks("server.start", { serverId: server.id, serverName: server.name }).catch(() => {});
     return res.json({ message: "Server started" });
   } catch (error: any) {
     console.error("Start server error:", error);
@@ -308,6 +311,7 @@ router.post("/servers/:id/stop", authenticate, async (req: Request, res: Respons
     await prisma.server.update({ where: { id: server.id }, data: { status: "STOPPING" } });
     stopLocalServer(server.id);
     await prisma.server.update({ where: { id: server.id }, data: { status: "STOPPED" } });
+    triggerWebhooks("server.stop", { serverId: server.id, serverName: server.name }).catch(() => {});
     return res.json({ message: "Server stopped" });
   } catch (error) {
     console.error("Stop server error:", error);
