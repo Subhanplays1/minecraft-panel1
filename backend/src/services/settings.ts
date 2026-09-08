@@ -223,6 +223,7 @@ export class SettingsService {
         maintenanceLogo: branding.maintenanceLogo,
         maintenanceStatusUrl: branding.maintenanceStatusUrl,
         customJs: branding.whiteLabelMode && branding.customJsEnabled ? branding.customJs : null,
+        discordRequired: branding.discordRequired,
       },
       auth: {
         loginTitle: auth.loginTitle,

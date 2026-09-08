@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useBranding } from "@/components/BrandingProvider"
+import { discord } from "@/lib/api"
 import {
   Server, ArrowLeft, Download, Cpu, HardDrive, Globe, FolderOpen,
-  Settings, Play, ChevronRight, Check, Zap, Shield, Gamepad2
+  Settings, Play, ChevronRight, Check, Zap, Shield, Gamepad2,
+  AlertCircle, MessageSquare
 } from "lucide-react"
 
 interface NodeData {
@@ -70,6 +72,9 @@ export default function NewServerPage() {
   const [userTotalRam, setUserTotalRam] = useState(0)
   const [userTotalDisk, setUserTotalDisk] = useState(0)
   const [error, setError] = useState("")
+  const [discordRequired, setDiscordRequired] = useState(false)
+  const [discordVerified, setDiscordVerified] = useState(false)
+  const [checkingDiscord, setCheckingDiscord] = useState(true)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -89,6 +94,8 @@ export default function NewServerPage() {
         }
       })
       .catch(() => {})
+    // Check Discord verification requirement
+    checkDiscordVerification()
   }, [])
 
   useEffect(() => {
@@ -117,6 +124,18 @@ export default function NewServerPage() {
       .finally(() => setVersionsLoading(false))
   }, [software])
 
+  const checkDiscordVerification = async () => {
+    try {
+      const res = await discord.getStatus()
+      setDiscordRequired(res.botReady && settings?.branding?.discordRequired !== false)
+      setDiscordVerified(res.discord?.discordVerified || false)
+    } catch {
+      setDiscordRequired(false)
+    } finally {
+      setCheckingDiscord(false)
+    }
+  }
+
   const selectedSoftware = SOFTWARE_OPTIONS.find((s) => s.id === software)
   const selectedNodeData = nodes.find((n) => n.id === selectedNode)
 
@@ -131,6 +150,10 @@ export default function NewServerPage() {
   }
 
   const handleCreate = async () => {
+    if (discordRequired && !discordVerified) {
+      router.push(`/discord-verify?redirect=${encodeURIComponent("/servers/new")}`)
+      return
+    }
     setCreating(true)
     setError("")
     try {
@@ -200,6 +223,26 @@ export default function NewServerPage() {
           </p>
         </div>
       </div>
+
+      {/* Step indicator */}
+      {discordRequired && !discordVerified && !checkingDiscord && (
+        <div className="mb-6 p-4 rounded-xl flex items-start gap-3 animate-fade-in" style={{ backgroundColor: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)" }}>
+          <MessageSquare className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: "var(--brand-primary)" }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium mb-1" style={{ color: "var(--brand-text)" }}>Discord Verification Required</p>
+            <p className="text-sm" style={{ color: "var(--brand-muted)" }}>
+              You must verify your Discord account before creating a server. 
+              <button
+                onClick={() => router.push(`/discord-verify?redirect=${encodeURIComponent("/servers/new")}`)}
+                className="text-sm font-medium underline"
+                style={{ color: "var(--brand-primary)" }}
+              >
+                Verify now
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-8 animate-fade-in-up delay-100">

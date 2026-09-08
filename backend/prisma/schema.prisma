@@ -30,6 +30,15 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Discord verification
+  discordId           String?
+  discordUsername     String?
+  discordAvatar       String?
+  discordVerified     Boolean   @default(false)
+  discordVerifiedAt   DateTime?
+  verificationCode    String?
+  verificationCodeExpires DateTime?
+
   sessions       Session[]
   oauthAccounts  OAuthAccount[]
   servers        Server[]
@@ -38,9 +47,11 @@ model User {
   apiKeys        ApiKey[]
   notifications  Notification[]
   notificationPreferences NotificationPreference?
+  discordVerifications DiscordVerification[]
 
   @@index([email])
   @@index([role])
+  @@index([discordId])
 }
 
 model Session {
@@ -191,15 +202,18 @@ model BrandingSettings {
   customJs       String?
   customJsEnabled Boolean @default(false)
 
-  // Maintenance
-  maintenanceEnabled Boolean @default(false)
+// Maintenance
+  maintenanceEnabled Boolean  @default(false)
   maintenanceTitle String  @default("We're currently performing maintenance.")
-  maintenanceDescription String @default("We'll be back shortly.")
+  maintenanceDescription String  @default("We'll be back shortly.")
   maintenanceLogo  String?
   maintenanceBg    String?
   maintenanceCountdown Boolean @default(false)
   maintenanceStatusUrl String?
   maintenanceBypassIps String @default("[]")
+
+  // Discord
+  discordRequired Boolean @default(true)
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -452,6 +466,43 @@ model OAuthProvider {
   updatedAt    DateTime @updatedAt
 
   @@unique([tenantId, name])
+}
+
+model DiscordSettings {
+  id            String   @id @default(uuid())
+  tenantId      String   @default("default")
+  botToken      String?
+  clientId      String?
+  clientSecret  String?
+  guildId       String?
+  isEnabled     Boolean  @default(false)
+  verificationChannelId String?
+  logChannelId  String?
+  inviteUrl     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId])
+}
+
+model DiscordVerification {
+  id              String   @id @default(uuid())
+  userId          String
+  code            String   @unique
+  discordUserId   String?
+  discordUsername String?
+  status          String   @default("PENDING") // PENDING, VERIFIED, EXPIRED, USED
+  expiresAt       DateTime
+  verifiedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([code])
+  @@index([discordUserId])
+  @@index([status])
 }
 
 // ============================================================

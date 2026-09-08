@@ -12,6 +12,7 @@ import {
   killLocalServer, sendLocalCommand, isRunning, getStartedAt,
   getServerLogs, getServerPath,
 } from "../services/processManager";
+import { sendServerInvoiceDM } from "../services/discordBot";
 
 const router = Router();
 
@@ -173,6 +174,21 @@ router.post("/servers", authenticate, async (req: Request, res: Response) => {
       port: server.port,
     }).then(async () => {
       await prisma.server.update({ where: { id: server.id }, data: { status: "STOPPED" } });
+
+      // Send invoice DM to user's Discord if verified
+      const user = await prisma.user.findUnique({ where: { id: server.userId } });
+      if (user?.discordVerified && user?.discordId) {
+        const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        await sendServerInvoiceDM(user.discordId, server.name, {
+          amount: 0, // Free tier
+          currency: "USD",
+          renewalDate,
+          serverSoftware: server.software,
+          serverRam: server.ram,
+          serverIp: server.ip || "127.0.0.1",
+          serverPort: server.port,
+        });
+      }
     }).catch((err) => {
       console.error("CreateLocalServer error:", err);
     });

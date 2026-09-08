@@ -15,6 +15,7 @@ import { randomBytes } from "crypto";
 import authRoutes from "./routes/auth";
 import brandingRoutes from "./routes/branding";
 import serverRoutes from "./routes/servers";
+import { discordRouter, initializeDiscordBot } from "./routes/discord";
 import { handleUploadError } from "./services/upload";
 import { stopLocalServer, isRunning } from "./services/processManager";
 import { startSftpServer, stopSftpServer } from "./services/sftpServer";
@@ -61,6 +62,7 @@ app.use("/servers", express.static(serversDir, { maxAge: "1h" }));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/branding", brandingRoutes);
+app.use("/api/discord", discordRouter);
 app.use("/api", serverRoutes);
 
 // Upload error handling
@@ -143,6 +145,9 @@ async function main() {
 
     // Auto-seed default data
     await seedDefaults();
+
+    // Initialize Discord bot
+    await initializeDiscordBot();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

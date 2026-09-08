@@ -308,6 +308,7 @@ export interface PublicSettings {
     maintenanceStatusUrl: string | null;
     customCss: string | null;
     customJs: string | null;
+    discordRequired: boolean;
   };
   auth: Record<string, unknown>;
   navigation: Array<{ id: string; name: string; icon?: string; url: string; section: string; sortOrder: number; isVisible: boolean }>;
@@ -387,6 +388,7 @@ export interface BrandingSettings {
   maintenanceCountdown: boolean;
   maintenanceStatusUrl: string | null;
   maintenanceBypassIps: string[];
+  discordRequired: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -410,3 +412,45 @@ export interface Server {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface DiscordSettings {
+  isEnabled: boolean;
+  clientId: string;
+  guildId: string;
+  inviteUrl: string;
+  botReady: boolean;
+}
+
+export interface DiscordStatus {
+  discord: {
+    discordId: string | null;
+    discordUsername: string | null;
+    discordAvatar: string | null;
+    discordVerified: boolean;
+    discordVerifiedAt: string | null;
+    verificationCode: string | null;
+    verificationCodeExpires: string | null;
+  } | null;
+  botReady: boolean;
+}
+
+export interface VerificationCode {
+  code: string;
+  expiresAt: string;
+  alreadyVerified?: boolean;
+}
+
+export interface OAuthUrl {
+  url: string;
+}
+
+export const discord = {
+  getSettings: () => request<DiscordSettings>("/api/discord/settings"),
+  saveSettings: (data: Partial<DiscordSettings>) =>
+    request<{ success: boolean; settings: DiscordSettings }>("/api/discord/settings", { method: "POST", body: data }),
+  getOAuthUrl: () => request<OAuthUrl>("/api/discord/oauth/url"),
+  generateVerification: () => request<VerificationCode>("/api/discord/verify/generate", { method: "POST" }),
+  checkVerification: () => request<{ verified: boolean; discordUsername?: string }>("/api/discord/verify/check", { method: "POST" }),
+  sendVerificationDM: () => request<{ success: boolean }>("/api/discord/verify/send-dm", { method: "POST" }),
+  getStatus: () => request<DiscordStatus>("/api/discord/status"),
+};
