@@ -5,10 +5,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Palette, Navigation, Flag, Mail, Bell, Wrench,
-  MessageCircle, Settings, Gamepad2, Activity, Webhook, Clock
+  MessageCircle, Settings, Gamepad2, Activity, Webhook, Clock,
+  Shield, Users, DollarSign, Database, Ban, Key, History, UserMinus, Scroll
 } from "lucide-react";
 
 const SETTINGS_NAV = [
+  { href: "/admin/revenue", label: "Revenue", icon: <DollarSign size={15} strokeWidth={1.5} /> },
+  { href: "/admin/users", label: "Users", icon: <Users size={15} strokeWidth={1.5} /> },
+  { href: "/admin/roles", label: "Roles", icon: <Shield size={15} strokeWidth={1.5} /> },
+  { href: "/admin/quotas", label: "Quotas", icon: <Database size={15} strokeWidth={1.5} /> },
+  { href: "/admin/audit", label: "Audit Log", icon: <Scroll size={15} strokeWidth={1.5} /> },
+  { href: "/admin/login-history", label: "Login History", icon: <History size={15} strokeWidth={1.5} /> },
+  { href: "/admin/suspensions", label: "Suspensions", icon: <UserMinus size={15} strokeWidth={1.5} /> },
+  { href: "/admin/blacklist", label: "Plugin Blacklist", icon: <Ban size={15} strokeWidth={1.5} /> },
+  { href: "/admin/api-keys", label: "API Keys", icon: <Key size={15} strokeWidth={1.5} /> },
+  { href: "/admin/maintenance", label: "Maintenance", icon: <Wrench size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/branding", label: "Branding", icon: <Palette size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/navigation", label: "Navigation", icon: <Navigation size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/features", label: "Features", icon: <Flag size={15} strokeWidth={1.5} /> },
@@ -17,7 +28,6 @@ const SETTINGS_NAV = [
   { href: "/admin/settings/email", label: "Email", icon: <Mail size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/announcements", label: "Announcements", icon: <Bell size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/social", label: "Social Links", icon: <MessageCircle size={15} strokeWidth={1.5} /> },
-  { href: "/admin/settings/maintenance", label: "Maintenance", icon: <Wrench size={15} strokeWidth={1.5} /> },
   { href: "/admin/health", label: "System Health", icon: <Activity size={15} strokeWidth={1.5} /> },
   { href: "/admin/webhooks", label: "Webhooks", icon: <Webhook size={15} strokeWidth={1.5} /> },
 ];

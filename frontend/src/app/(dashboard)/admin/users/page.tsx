@@ -1,316 +1,103 @@
-"use client";
+"use client"
+import { useState, useEffect } from "react"
+import { Loader2, Users, Plus, Trash2, Shield, Ban, CheckCircle, UserMinus, UserPlus, X, Search, LogIn } from "lucide-react"
 
-import React, { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { useBranding } from "@/components/BrandingProvider";
-import {
-  Users, Search, Shield, Ban, CheckCircle, ChevronDown,
-  RefreshCw, UserX, UserCheck, Clock, Mail, CalendarDays,
-} from "lucide-react";
-import toast from "react-hot-toast";
+interface UserData { id: string; email: string; name: string; role: string; banned: boolean; banReason: string | null; lastLoginAt: string | null; loginCount: number; createdAt: string; discordVerified: boolean; avatar: string | null; _count: { servers: number } }
 
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  role: "ADMIN" | "STAFF" | "CUSTOMER";
-  status: "ACTIVE" | "BANNED";
-  createdAt: string;
-  lastLoginAt: string | null;
-}
+export default function UsersPage() {
+  const [users, setUsers] = useState<UserData[]>([]); const [loading, setLoading] = useState(true); const [search, setSearch] = useState("")
+  const [showCreate, setShowCreate] = useState(false); const [form, setForm] = useState({ email: "", name: "", password: "", role: "CUSTOMER" })
+  const [creating, setCreating] = useState(false)
 
-const API_BASE = "";
+  const fetchUsers = async () => {
+    try { const r = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }); if (r.ok) setUsers(await r.json()) } catch {} finally { setLoading(false) }
+  }
+  useEffect(() => { fetchUsers() }, [])
 
-const ROLE_STYLES: Record<string, { bg: string; text: string }> = {
-  ADMIN: { bg: "color-mix(in srgb, var(--brand-primary) 20%, transparent)", text: "var(--brand-primary)" },
-  STAFF: { bg: "color-mix(in srgb, var(--brand-info) 20%, transparent)", text: "var(--brand-info)" },
-  CUSTOMER: { bg: "color-mix(in srgb, var(--brand-muted) 20%, transparent)", text: "var(--brand-muted)" },
-};
-
-export default function AdminUsersPage() {
-  const router = useRouter();
-  const { settings } = useBranding();
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [token, setToken] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  useEffect(() => {
-    const t = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
-    if (!t || !user) {
-      router.push("/auth/login");
-      return;
-    }
-    const parsed = JSON.parse(user);
-    if (parsed.role !== "ADMIN") {
-      router.push("/dashboard");
-      return;
-    }
-    setToken(t);
-  }, [router]);
-
-  const fetchUsers = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/admin/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch users");
-      const data = await res.json();
-      setUsers(data.users || data || []);
-    } catch (error) {
-      toast.error("Failed to load users");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    if (token) fetchUsers();
-  }, [token, fetchUsers]);
-
-  const handleBanToggle = async (userId: string, currentStatus: string) => {
-    if (!token) return;
-    setActionLoading(userId);
-    try {
-      const isBanned = currentStatus !== "BANNED";
-      const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ banned: isBanned }),
-      });
-      if (!res.ok) throw new Error("Action failed");
-      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, banned: isBanned } : u));
-      toast.success(isBanned ? "User banned" : "User unbanned");
-    } catch {
-      toast.error("Action failed");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    if (!token) return;
-    setActionLoading(userId);
-    try {
-      const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newRole }),
-      });
-      if (!res.ok) throw new Error("Role change failed");
-      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole as UserData["role"] } : u));
-      toast.success("Role updated");
-    } catch {
-      toast.error("Failed to update role");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.role.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const formatDate = (d: string | null) => {
-    if (!d) return "—";
-    return new Date(d).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--brand-background)" }}>
-        <div className="animate-pulse text-lg" style={{ color: "var(--brand-muted)" }}>Loading users...</div>
-      </div>
-    );
+  const createUser = async () => {
+    setCreating(true)
+    try { const r = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify(form) }); if (r.ok) { setShowCreate(false); setForm({ email: "", name: "", password: "", role: "CUSTOMER" }); fetchUsers() } } catch {} finally { setCreating(false) }
+  }
+  const changeRole = async (userId: string, role: string) => {
+    await fetch(`/api/admin/users/${userId}/role`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ role }) })
+    fetchUsers()
+  }
+  const toggleBan = async (userId: string, banned: boolean) => {
+    await fetch(`/api/admin/users/${userId}/ban`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ banned, reason: banned ? "Suspended by admin" : "" }) })
+    fetchUsers()
+  }
+  const deleteUser = async (userId: string) => {
+    if (!confirm("Delete this user?")) return
+    await fetch(`/api/admin/users/${userId}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+    fetchUsers()
+  }
+  const impersonate = async (userId: string) => {
+    const r = await fetch(`/api/admin/users/${userId}/impersonate`, { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+    if (r.ok) { const d = await r.json(); localStorage.setItem("token", d.token); window.location.href = "/servers" }
   }
 
+  const filtered = users.filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()))
+
+  if (loading) return <div className="p-5 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--brand-muted)" }} strokeWidth={1.5} /></div>
+
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-3 mb-6 animate-fade-in">
-        <Users size={20} style={{ color: "var(--brand-primary)" }} />
-        <h1 className="text-2xl font-bold" style={{ color: "var(--brand-text)" }}>
-          User Management
-        </h1>
-        <span
-          className="text-xs px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: "var(--brand-card)", color: "var(--brand-muted)", border: "1px solid var(--brand-border)" }}
-        >
-          {filteredUsers.length} users
-        </span>
+    <div className="p-5 md:p-6 max-w-[1000px] mx-auto">
+      <div className="flex items-center justify-between mb-5">
+        <div><h1 className="text-[16px] font-semibold" style={{ color: "var(--brand-text)" }}>User Management</h1><p className="text-[12px] mt-1" style={{ color: "var(--brand-muted)" }}>{users.length} users</p></div>
+        <div className="flex gap-2 items-center">
+          <div className="relative"><Search size={13} strokeWidth={1.5} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--brand-muted)" }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="pl-8 pr-3 py-1.5 rounded-lg text-[11px] outline-none w-[180px]" style={{ backgroundColor: "var(--brand-background)", border: "1px solid var(--brand-border)", color: "var(--brand-text)" }} /></div>
+          <button onClick={() => setShowCreate(true)} className="btn-primary text-[11px] py-1.5 px-3"><Plus className="w-3 h-3" strokeWidth={2} /> Add User</button>
+        </div>
       </div>
 
-      <div className="animate-fade-in-up delay-100">
-        {/* Search */}
-        <div className="mb-6">
-          <div
-            className="flex items-center gap-3 px-4 py-3 rounded-xl max-w-md"
-            style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}
-          >
-            <Search size={18} style={{ color: "var(--brand-muted)" }} />
-            <input
-              type="text"
-              placeholder="Search users by name, email, or role..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-transparent text-sm focus:outline-none"
-              style={{ color: "var(--brand-text)" }}
-            />
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowCreate(false)}>
+          <div className="w-[380px] p-4 rounded-xl" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3"><span className="text-[13px] font-medium" style={{ color: "var(--brand-text)" }}>Create User</span><button onClick={() => setShowCreate(false)}><X size={14} strokeWidth={1.5} style={{ color: "var(--brand-muted)" }} /></button></div>
+            <div className="space-y-2">
+              {[{ label: "Email", key: "email" }, { label: "Name", key: "name" }, { label: "Password", key: "password" }].map(f => (
+                <div key={f.key}><label className="text-[10px] font-medium uppercase tracking-wider mb-1 block" style={{ color: "var(--brand-muted)" }}>{f.label}</label>
+                  <input type={f.key === "password" ? "password" : "text"} value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} className="w-full px-3 py-1.5 rounded-lg text-[12px] outline-none" style={{ backgroundColor: "var(--brand-background)", border: "1px solid var(--brand-border)", color: "var(--brand-text)" }} /></div>
+              ))}
+              <div><label className="text-[10px] font-medium uppercase tracking-wider mb-1 block" style={{ color: "var(--brand-muted)" }}>Role</label>
+                <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} className="w-full px-3 py-1.5 rounded-lg text-[12px] outline-none" style={{ backgroundColor: "var(--brand-background)", border: "1px solid var(--brand-border)", color: "var(--brand-text)" }}>
+                  <option value="CUSTOMER">Customer</option><option value="MODERATOR">Moderator</option><option value="ADMIN">Admin</option></select></div>
+              <button onClick={createUser} disabled={creating} className="w-full btn-primary text-[11px] py-2 disabled:opacity-40">{creating ? <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} /> : "Create"}</button>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Users Table */}
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}
-        >
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--brand-border)" }}>
-                <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-muted)" }}>Name</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-muted)" }}>Email</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-muted)" }}>Role</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-muted)" }}>Status</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-muted)" }}>Joined</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-muted)" }}>Last Login</th>
-                <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--brand-muted)" }}>Actions</th>
+      <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead><tr style={{ borderBottom: "1px solid var(--brand-border)" }}>
+              {["User", "Role", "Servers", "Joined", "Actions"].map(h => <th key={h} className="px-3 py-2 text-left font-medium" style={{ color: "var(--brand-muted)" }}>{h}</th>)}
+            </tr></thead>
+            <tbody>{filtered.map(u => (
+              <tr key={u.id} style={{ borderBottom: "1px solid var(--brand-border)" }} className={u.banned ? "opacity-50" : ""}>
+                <td className="px-3 py-2"><div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-medium" style={{ backgroundColor: "#1a1a1a", color: "var(--brand-muted)" }}>{u.avatar ? <img src={u.avatar} className="w-7 h-7 rounded-full" /> : u.name.charAt(0).toUpperCase()}</div>
+                  <div><div className="font-medium" style={{ color: "var(--brand-text)" }}>{u.name}</div><div className="text-[10px]" style={{ color: "var(--brand-muted)" }}>{u.email}</div></div>
+                </div></td>
+                <td className="px-3 py-2">
+                  <select value={u.role} onChange={e => changeRole(u.id, e.target.value)} className="px-2 py-0.5 rounded text-[10px] outline-none" style={{ backgroundColor: "var(--brand-background)", border: "1px solid var(--brand-border)", color: u.role === "ADMIN" ? "#ef4444" : u.role === "MODERATOR" ? "#f59e0b" : "var(--brand-text)" }}>
+                    <option value="CUSTOMER">Customer</option><option value="MODERATOR">Moderator</option><option value="ADMIN">Admin</option></select>
+                </td>
+                <td className="px-3 py-2" style={{ color: "var(--brand-muted)" }}>{u._count.servers}</td>
+                <td className="px-3 py-2" style={{ color: "var(--brand-muted)" }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                <td className="px-3 py-2"><div className="flex items-center gap-1">
+                  <button onClick={() => impersonate(u.id)} className="btn-ghost text-[10px]" title="Login as user"><LogIn size={11} strokeWidth={1.5} /></button>
+                  <button onClick={() => toggleBan(u.id, !u.banned)} className={`btn-ghost text-[10px] ${u.banned ? "text-green-400" : "text-yellow-400"}`} title={u.banned ? "Unban" : "Ban"}>
+                    {u.banned ? <CheckCircle size={11} strokeWidth={1.5} /> : <Ban size={11} strokeWidth={1.5} />}</button>
+                  <button onClick={() => deleteUser(u.id)} className="btn-ghost text-[10px] text-red-400" title="Delete"><Trash2 size={11} strokeWidth={1.5} /></button>
+                </div></td>
               </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12" style={{ color: "var(--brand-muted)" }}>
-                    No users found
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((user) => {
-                  const roleStyle = ROLE_STYLES[user.role] || ROLE_STYLES.CUSTOMER;
-                  return (
-                    <tr
-                      key={user.id}
-                      className="transition-colors"
-                      style={{ borderBottom: "1px solid var(--brand-border)" }}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                            style={{ backgroundColor: roleStyle.bg, color: roleStyle.text }}
-                          >
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
-                          <span className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
-                            {user.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Mail size={14} style={{ color: "var(--brand-muted)" }} />
-                          <span className="text-sm" style={{ color: "var(--brand-muted)" }}>{user.email}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="relative">
-                          <select
-                            value={user.role}
-                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                            disabled={actionLoading === user.id}
-                            className="appearance-none px-3 py-1.5 pr-8 rounded-lg text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 disabled:opacity-50"
-                            style={{
-                              backgroundColor: roleStyle.bg,
-                              color: roleStyle.text,
-                              border: `1px solid ${roleStyle.text}30`,
-                            }}
-                          >
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="STAFF">STAFF</option>
-                            <option value="CUSTOMER">CUSTOMER</option>
-                          </select>
-                          <ChevronDown
-                            size={12}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
-                            style={{ color: roleStyle.text }}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {user.status === "BANNED" ? (
-                          <span
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                            style={{
-                              backgroundColor: "color-mix(in srgb, var(--brand-danger) 20%, transparent)",
-                              color: "var(--brand-danger)",
-                            }}
-                          >
-                            <Ban size={12} />
-                            Banned
-                          </span>
-                        ) : (
-                          <span
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                            style={{
-                              backgroundColor: "color-mix(in srgb, var(--brand-success) 20%, transparent)",
-                              color: "var(--brand-success)",
-                            }}
-                          >
-                            <CheckCircle size={12} />
-                            Active
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <CalendarDays size={14} style={{ color: "var(--brand-muted)" }} />
-                          <span className="text-sm" style={{ color: "var(--brand-muted)" }}>
-                            {formatDate(user.createdAt)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Clock size={14} style={{ color: "var(--brand-muted)" }} />
-                          <span className="text-sm" style={{ color: "var(--brand-muted)" }}>
-                            {formatDate(user.lastLoginAt)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleBanToggle(user.id, user.status)}
-                          disabled={actionLoading === user.id}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                          style={{
-                            backgroundColor: user.status === "BANNED"
-                              ? "color-mix(in srgb, var(--brand-success) 20%, transparent)"
-                              : "color-mix(in srgb, var(--brand-danger) 20%, transparent)",
-                            color: user.status === "BANNED" ? "var(--brand-success)" : "var(--brand-danger)",
-                            border: `1px solid ${user.status === "BANNED" ? "var(--brand-success)" : "var(--brand-danger)"}30`,
-                          }}
-                        >
-                          {user.status === "BANNED" ? <UserCheck size={14} /> : <UserX size={14} />}
-                          {user.status === "BANNED" ? "Unban" : "Ban"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
+            ))}</tbody>
           </table>
         </div>
       </div>
     </div>
-  );
+  )
 }

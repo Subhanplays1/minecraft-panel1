@@ -23,6 +23,8 @@ import webhookRoutes from "./routes/webhooks";
 import templateRoutes from "./routes/templates";
 import serverLogRoutes from "./routes/serverLogs";
 import advancedRoutes from "./routes/advanced";
+import adminAdvancedRoutes from "./routes/adminAdvanced";
+import serverFeaturesRoutes from "./routes/serverFeatures";
 import { handleUploadError } from "./services/upload";
 import { stopLocalServer, isRunning, onCrash } from "./services/processManager";
 import { triggerWebhooks } from "./routes/webhooks";
@@ -85,6 +87,8 @@ app.use("/api", webhookRoutes);
 app.use("/api", templateRoutes);
 app.use("/api", serverLogRoutes);
 app.use("/api", advancedRoutes);
+app.use("/api", adminAdvancedRoutes);
+app.use("/api", serverFeaturesRoutes);
 app.use("/api", serverRoutes);
 
 // Upload error handling

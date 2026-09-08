@@ -51,6 +51,9 @@ model User {
   notifications  Notification[]
   notificationPreferences NotificationPreference?
   discordVerifications DiscordVerification[]
+  auditLogs      AuditLog[]
+  loginHistory   LoginHistory[]
+  suspensions    UserSuspension[]
 
   @@index([email])
   @@index([role])
@@ -574,6 +577,10 @@ model Server {
   activityEvents ActivityEvent[]
   uptimeRecords UptimeRecord[]
   performanceAlerts PerformanceAlert[]
+  playerHistory PlayerHistory[]
+  portForwards PortForward[]
+  gitRepos GitRepo[]
+  healthHistory ServerHealth[]
 
   @@index([userId])
   @@index([status])
@@ -819,4 +826,154 @@ model PerformanceAlert {
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@index([serverId])
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  targetType String?
+  targetId   String?
+  details    String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ============================================================
+// LOGIN HISTORY
+// ============================================================
+
+model LoginHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  ip        String?
+  userAgent String?
+  success   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// USER SUSPENSION
+// ============================================================
+
+model UserSuspension {
+  id          String   @id @default(uuid())
+  userId      String
+  reason      String
+  suspendedBy String?
+  expiresAt   DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================
+// PLAYER JOIN/LEAVE HISTORY
+// ============================================================
+
+model PlayerHistory {
+  id        String   @id @default(uuid())
+  serverId  String
+  playerName String
+  uuid      String?
+  action    String
+  ip        String?
+  createdAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@index([playerName])
+  @@index([createdAt])
+}
+
+// ============================================================
+// PLUGIN BLACKLIST
+// ============================================================
+
+model PluginBlacklist {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  reason    String?
+  addedBy   String?
+  createdAt DateTime @default(now())
+}
+
+// ============================================================
+// PORT FORWARDING
+// ============================================================
+
+model PortForward {
+  id           String   @id @default(uuid())
+  serverId     String
+  internalPort Int
+  externalPort Int
+  protocol     String   @default("TCP")
+  description  String?
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@unique([externalPort, protocol])
+}
+
+// ============================================================
+// GIT INTEGRATION
+// ============================================================
+
+model GitRepo {
+  id         String   @id @default(uuid())
+  serverId   String
+  repoUrl    String
+  branch     String   @default("main")
+  lastCommit String?
+  lastPullAt DateTime?
+  autoPull   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+}
+
+// ============================================================
+// SERVER HEALTH HISTORY
+// ============================================================
+
+model ServerHealth {
+  id         String   @id @default(uuid())
+  serverId   String
+  score      Int
+  tps        Float?
+  ramPct     Float?
+  cpuPct     Float?
+  uptimePct  Float?
+  crashCount Int      @default(0)
+  details    String?
+  createdAt  DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@index([createdAt])
 }

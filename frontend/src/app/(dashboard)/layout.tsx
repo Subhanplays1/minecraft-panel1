@@ -9,7 +9,8 @@ import {
   Bell, Terminal, FileText, Link2, UserPlus, Puzzle, Archive,
   User, Activity, HelpCircle, Sliders, FolderOpen, ArrowLeft, X,
   Clock, Cpu, FileCode, Zap, Shield, Globe,
-  Moon, Sun, Loader2, History, Wifi, AlertTriangle, Download, TrendingUp
+  Moon, Sun, Loader2, History, Wifi, AlertTriangle, Download, TrendingUp,
+  Heart, Edit, RotateCcw, Users2, Grid, GitCompare, Network as NetworkIcon, GitBranch, DollarSign
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -100,13 +101,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const serverNavItems = [
     { id: "console", name: "Console", icon: <Terminal size={16} strokeWidth={1.5} />, url: `/servers/${serverId}` },
     { id: "files", name: "Files", icon: <FolderOpen size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/files` },
+    { id: "editor", name: "File Editor", icon: <Edit size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/editor` },
     { id: "plugins", name: "Plugins", icon: <Puzzle size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/plugins` },
     { id: "logs", name: "Logs", icon: <FileCode size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/logs` },
     { id: "resources", name: "Resources", icon: <Cpu size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/resources` },
+    { id: "health", name: "Health Score", icon: <Heart size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/health` },
     { id: "timeline", name: "Timeline", icon: <History size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/timeline` },
     { id: "uptime", name: "Uptime", icon: <Wifi size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/uptime` },
+    { id: "heatmap", name: "Heatmap", icon: <Grid size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/heatmap` },
     { id: "alerts", name: "Alerts", icon: <AlertTriangle size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/alerts` },
     { id: "forecast", name: "Forecast", icon: <TrendingUp size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/forecast` },
+    { id: "players", name: "Players", icon: <Users2 size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/players` },
+    { id: "conflicts", name: "Conflicts", icon: <GitCompare size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/conflicts` },
+    { id: "config-diff", name: "Config Diff", icon: <FileCode size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/config-diff` },
+    { id: "ports", name: "Port Forward", icon: <NetworkIcon size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/ports` },
+    { id: "git", name: "Git", icon: <GitBranch size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/git` },
+    { id: "cost", name: "Cost", icon: <DollarSign size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/cost` },
+    { id: "auto-restart", name: "Auto-Restart", icon: <RotateCcw size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/auto-restart` },
     { id: "export", name: "Export Docker", icon: <Download size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/export` },
     { id: "scheduler", name: "Scheduler", icon: <Clock size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/scheduler` },
     { id: "properties", name: "Properties", icon: <FileText size={16} strokeWidth={1.5} />, url: `/servers/${serverId}/properties` },

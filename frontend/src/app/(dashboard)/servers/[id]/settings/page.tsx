@@ -130,6 +130,16 @@ export default function ServerSettingsPage() {
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Changes
         </button>
 
+        {/* Duplicate */}
+        <button onClick={async () => {
+          if (!confirm("Duplicate this server?")) return
+          const token = localStorage.getItem("token")
+          const r = await fetch(`/api/servers/${server.id}/duplicate`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+          if (r.ok) { const d = await r.json(); router.push(`/servers/${d.id}`) }
+        }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)", color: "var(--brand-text)" }}>
+          Duplicate Server
+        </button>
+
         {/* Danger zone */}
         <div className="rounded-xl p-5 animate-fade-in-up delay-200" style={{ backgroundColor: "var(--brand-card)", border: "1px solid rgba(239,68,68,0.3)" }}>
           <h2 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: "#ef4444" }}>
