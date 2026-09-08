@@ -415,8 +415,12 @@ export interface Server {
 
 export interface DiscordSettings {
   isEnabled: boolean;
+  botToken: string;
   clientId: string;
+  clientSecret: string;
   guildId: string;
+  verificationChannelId: string;
+  logChannelId: string;
   inviteUrl: string;
   botReady: boolean;
 }
@@ -445,12 +449,12 @@ export interface OAuthUrl {
 }
 
 export const discord = {
-  getSettings: () => request<DiscordSettings>("/api/discord/settings"),
-  saveSettings: (data: Partial<DiscordSettings>) =>
-    request<{ success: boolean; settings: DiscordSettings }>("/api/discord/settings", { method: "POST", body: data }),
-  getOAuthUrl: () => request<OAuthUrl>("/api/discord/oauth/url"),
-  generateVerification: () => request<VerificationCode>("/api/discord/verify/generate", { method: "POST" }),
-  checkVerification: () => request<{ verified: boolean; discordUsername?: string }>("/api/discord/verify/check", { method: "POST" }),
-  sendVerificationDM: () => request<{ success: boolean }>("/api/discord/verify/send-dm", { method: "POST" }),
-  getStatus: () => request<DiscordStatus>("/api/discord/status"),
+  getSettings: (token?: string) => request<DiscordSettings>("/api/discord/settings", { token }),
+  updateSettings: (data: Partial<DiscordSettings>, token?: string) =>
+    request<{ success: boolean; settings: DiscordSettings }>("/api/discord/settings", { method: "POST", body: data, token }),
+  getOAuthUrl: (token?: string) => request<OAuthUrl>("/api/discord/oauth/url", { token }),
+  generateVerification: (token?: string) => request<VerificationCode>("/api/discord/verify/generate", { method: "POST", token }),
+  checkVerification: (token?: string) => request<{ verified: boolean; discordUsername?: string }>("/api/discord/verify/check", { method: "POST", token }),
+  sendVerificationDM: (token?: string) => request<{ success: boolean }>("/api/discord/verify/send-dm", { method: "POST", token }),
+  getStatus: (token?: string) => request<DiscordStatus>("/api/discord/status", { token }),
 };

@@ -15,10 +15,15 @@ router.get("/settings", authenticate, async (req: Request, res: Response) => {
     const settings = await prisma.discordSettings.findUnique({
       where: { tenantId: "default" }
     });
+    const isAdmin = req.user?.role === "ADMIN";
     res.json({
       isEnabled: settings?.isEnabled || false,
       clientId: settings?.clientId || "",
+      clientSecret: isAdmin ? (settings?.clientSecret || "") : undefined,
+      botToken: isAdmin ? (settings?.botToken || "") : undefined,
       guildId: settings?.guildId || "",
+      verificationChannelId: settings?.verificationChannelId || "",
+      logChannelId: settings?.logChannelId || "",
       inviteUrl: settings?.inviteUrl || "",
       botReady: isDiscordReady()
     });

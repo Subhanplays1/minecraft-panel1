@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Palette, Navigation, Flag, Mail, Bell, Wrench,
-  MessageCircle, Settings
+  MessageCircle, Settings, Gamepad2
 } from "lucide-react";
 
 const SETTINGS_NAV = [
   { href: "/admin/settings/branding", label: "Branding", icon: <Palette size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/navigation", label: "Navigation", icon: <Navigation size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/features", label: "Features", icon: <Flag size={15} strokeWidth={1.5} /> },
+  { href: "/admin/settings/discord", label: "Discord", icon: <Gamepad2 size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/email", label: "Email", icon: <Mail size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/announcements", label: "Announcements", icon: <Bell size={15} strokeWidth={1.5} /> },
   { href: "/admin/settings/social", label: "Social Links", icon: <MessageCircle size={15} strokeWidth={1.5} /> },
