@@ -28,8 +28,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <style dangerouslySetInnerHTML={{ __html: `
+          html, body { background: #080808 !important; margin: 0; padding: 0; }
+          #app-splash { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: #080808; transition: opacity 0.2s; }
+          #app-splash img { height: 32px; opacity: 0.8; }
+        `}} />
       </head>
       <body className="min-h-screen antialiased" style={{ fontFamily: "var(--font-inter), system-ui, -apple-system, sans-serif" }}>
+        <div id="app-splash">
+          <img src="/logo.svg" alt="Minevo" />
+        </div>
         <BrandingProvider>
           <AdBlockerProvider>
             {children}

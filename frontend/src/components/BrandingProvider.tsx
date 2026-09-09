@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { branding as brandingApi, type PublicSettings } from "@/lib/api";
@@ -115,6 +115,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     setThemeState(initial);
     themeRef.current = initial;
     applyThemeVars(initial);
+    document.getElementById("app-splash")?.remove();
   }, []);
 
   const toggleTheme = useCallback(() => {
