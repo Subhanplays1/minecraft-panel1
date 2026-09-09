@@ -837,7 +837,7 @@ router.delete("/backups/:id", authenticate, async (req: Request, res: Response) 
 // SERVER PROPERTIES
 // ============================================================
 
-router.get("/:id/properties", authenticate, async (req: Request, res: Response) => {
+router.get("/servers/:id/properties", authenticate, async (req: Request, res: Response) => {
   try {
     const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
     if (!server) return res.status(404).json({ error: "Server not found" });
@@ -863,7 +863,7 @@ router.get("/:id/properties", authenticate, async (req: Request, res: Response) 
   }
 });
 
-router.put("/:id/properties", authenticate, async (req: Request, res: Response) => {
+router.put("/servers/:id/properties", authenticate, async (req: Request, res: Response) => {
   try {
     const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
     if (!server) return res.status(404).json({ error: "Server not found" });
@@ -886,7 +886,7 @@ router.put("/:id/properties", authenticate, async (req: Request, res: Response) 
 // SUB-USERS (per-server access)
 // ============================================================
 
-router.get("/:id/users", authenticate, async (req: Request, res: Response) => {
+router.get("/servers/:id/users", authenticate, async (req: Request, res: Response) => {
   try {
     const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
     if (!server) return res.status(404).json({ error: "Server not found" });
@@ -903,7 +903,7 @@ router.get("/:id/users", authenticate, async (req: Request, res: Response) => {
   }
 });
 
-router.post("/:id/users", authenticate, async (req: Request, res: Response) => {
+router.post("/servers/:id/users", authenticate, async (req: Request, res: Response) => {
   try {
     const { email, name, permissions } = req.body;
     let user = await prisma.user.findUnique({ where: { email } });
@@ -917,7 +917,7 @@ router.post("/:id/users", authenticate, async (req: Request, res: Response) => {
   }
 });
 
-router.delete("/:id/users/:userId", authenticate, async (req: Request, res: Response) => {
+router.delete("/servers/:id/users/:userId", authenticate, async (req: Request, res: Response) => {
   try {
     return res.json({ message: "Removed" });
   } catch (error) {
@@ -932,7 +932,7 @@ router.delete("/:id/users/:userId", authenticate, async (req: Request, res: Resp
 
 const PLAYIT_VERSION = "v0.15.26";
 
-router.get("/:id/playit", authenticate, async (req: Request, res: Response) => {
+router.get("/servers/:id/playit", authenticate, async (req: Request, res: Response) => {
   try {
     const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
     if (!server) return res.status(404).json({ error: "Server not found" });
@@ -969,7 +969,7 @@ router.get("/:id/playit", authenticate, async (req: Request, res: Response) => {
   }
 });
 
-router.post("/:id/playit/start", authenticate, async (req: Request, res: Response) => {
+router.post("/servers/:id/playit/start", authenticate, async (req: Request, res: Response) => {
   try {
     const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
     if (!server) return res.status(404).json({ error: "Server not found" });
@@ -1021,7 +1021,7 @@ router.post("/:id/playit/start", authenticate, async (req: Request, res: Respons
   }
 });
 
-router.post("/:id/playit/stop", authenticate, async (req: Request, res: Response) => {
+router.post("/servers/:id/playit/stop", authenticate, async (req: Request, res: Response) => {
   try {
     const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
     if (!server) return res.status(404).json({ error: "Server not found" });
@@ -1039,7 +1039,7 @@ router.post("/:id/playit/stop", authenticate, async (req: Request, res: Response
   }
 });
 
-router.post("/:id/playit/reset", authenticate, async (req: Request, res: Response) => {
+router.post("/servers/:id/playit/reset", authenticate, async (req: Request, res: Response) => {
   try {
     const server = await prisma.server.findUnique({ where: { id: param(req, "id") } });
     if (!server) return res.status(404).json({ error: "Server not found" });
