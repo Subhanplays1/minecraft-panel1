@@ -31,12 +31,19 @@ export default function ServerSettingsPage() {
 
   const saveSettings = async () => {
     setSaving(true)
-    try { const r = await fetch(`/api/servers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ name, ram, cpu, port, notes }) }); if (r.ok) toast.success("Saved") else toast.error("Failed") } catch { toast.error("Failed") } finally { setSaving(false) }
+    try {
+      const r = await fetch(`/api/servers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ name, ram, cpu, port, notes }) })
+      if (r.ok) toast.success("Saved") else toast.error("Failed")
+    } catch (e) { toast.error("Failed") } finally { setSaving(false) }
   }
 
   const deleteServer = async () => {
-    if (!confirm("Delete this server?")) return; setDeleting(true)
-    try { const r = await fetch(`/api/servers/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }); if (r.ok) { toast.success("Deleted"); router.push("/servers") } } catch {} finally { setDeleting(false) }
+    if (!confirm("Delete this server?")) return
+    setDeleting(true)
+    try {
+      const r = await fetch(`/api/servers/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+      if (r.ok) { toast.success("Deleted"); router.push("/servers") }
+    } catch (e) {} finally { setDeleting(false) }
   }
 
   if (loading) return <div className="p-5 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--brand-muted)" }} strokeWidth={1.5} /></div>
@@ -160,8 +167,8 @@ function EditorSection({ serverId }: { serverId: string }) {
   const [filePath, setFilePath] = useState("server.properties"); const [content, setContent] = useState("")
   const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false); const [saved, setSaved] = useState(false)
 
-  const loadFile = async () => { setLoading(true); setSaved(false); try { const r = await fetch(`/api/servers/${serverId}/files/read?path=${encodeURIComponent(filePath)}`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }); if (r.ok) { const d = await r.json(); setContent(d.content) } else { const d = await r.json(); setContent(`# Error: ${d.error}`) } } catch { setContent("# Failed") } finally { setLoading(false) } }
-  const saveFile = async () => { setSaving(true); try { const r = await fetch(`/api/servers/${serverId}/files/write`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ filePath, content }) }); if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) } } catch {} finally { setSaving(false) } }
+  const loadFile = async () => { setLoading(true); setSaved(false); try { const r = await fetch(`/api/servers/${serverId}/files/read?path=${encodeURIComponent(filePath)}`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }); if (r.ok) { const d = await r.json(); setContent(d.content) } else { const d = await r.json(); setContent(`# Error: ${d.error}`) } } catch (e) { setContent("# Failed") } finally { setLoading(false) } }
+  const saveFile = async () => { setSaving(true); try { const r = await fetch(`/api/servers/${serverId}/files/write`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ filePath, content }) }); if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) } } catch (e) {} finally { setSaving(false) } }
   useEffect(() => { loadFile() }, [])
 
   return (
@@ -187,7 +194,7 @@ function EditorSection({ serverId }: { serverId: string }) {
 function AutoRestartSection({ serverId }: { serverId: string }) {
   const [enabled, setEnabled] = useState(false); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false)
   useEffect(() => { fetch(`/api/servers/${serverId}/auto-restart`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }).then(r => r.json()).then(d => setEnabled(d.enabled)).catch(() => {}).finally(() => setLoading(false)) }, [serverId])
-  const toggle = async () => { setSaving(true); try { await fetch(`/api/servers/${serverId}/auto-restart`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ enabled: !enabled }) }); setEnabled(!enabled) } catch {} finally { setSaving(false) } }
+  const toggle = async () => { setSaving(true); try { await fetch(`/api/servers/${serverId}/auto-restart`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ enabled: !enabled }) }); setEnabled(!enabled) } catch (e) {} finally { setSaving(false) } }
   if (loading) return <div className="p-5 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--brand-muted)" }} strokeWidth={1.5} /></div>
   return (
     <div className="p-4 rounded-xl" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
