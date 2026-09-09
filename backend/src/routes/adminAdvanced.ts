@@ -367,4 +367,56 @@ router.put("/admin/quotas", authenticate, authorize("ADMIN"), async (req: Reques
   }
 });
 
+// ============================================================
+// GOOGLE OAUTH & SMTP SETTINGS
+// ============================================================
+
+router.get("/admin/google-settings", authenticate, authorize("ADMIN"), async (_req: Request, res: Response) => {
+  try {
+    const settings = await prisma.setting.findMany({ where: { group: "google" } });
+    const result: Record<string, string> = {};
+    for (const s of settings) result[s.key] = s.value;
+    return res.json(result);
+  } catch { return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.put("/admin/google-settings", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
+  try {
+    const { settings } = req.body;
+    for (const [key, value] of Object.entries(settings)) {
+      const strValue = typeof value === "string" ? value : JSON.stringify(value);
+      await prisma.setting.upsert({
+        where: { group_key: { group: "google", key } },
+        update: { value: strValue },
+        create: { group: "google", key, value: strValue },
+      });
+    }
+    return res.json({ success: true });
+  } catch { return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.get("/admin/smtp-settings", authenticate, authorize("ADMIN"), async (_req: Request, res: Response) => {
+  try {
+    const settings = await prisma.setting.findMany({ where: { group: "smtp" } });
+    const result: Record<string, string> = {};
+    for (const s of settings) result[s.key] = s.value;
+    return res.json(result);
+  } catch { return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.put("/admin/smtp-settings", authenticate, authorize("ADMIN"), async (req: Request, res: Response) => {
+  try {
+    const { settings } = req.body;
+    for (const [key, value] of Object.entries(settings)) {
+      const strValue = typeof value === "string" ? value : JSON.stringify(value);
+      await prisma.setting.upsert({
+        where: { group_key: { group: "smtp", key } },
+        update: { value: strValue },
+        create: { group: "smtp", key, value: strValue },
+      });
+    }
+    return res.json({ success: true });
+  } catch { return res.status(500).json({ error: "Internal server error" }); }
+});
+
 export default router;

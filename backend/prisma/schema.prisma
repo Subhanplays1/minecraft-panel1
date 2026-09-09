@@ -42,6 +42,10 @@ model User {
   verificationCode    String?
   verificationCodeExpires DateTime?
 
+  // Google OAuth
+  googleId            String?
+  googleAvatar        String?
+
   sessions       Session[]
   oauthAccounts  OAuthAccount[]
   servers        Server[]

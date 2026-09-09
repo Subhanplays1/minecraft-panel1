@@ -1,10 +1,17 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useBranding } from "@/components/BrandingProvider"
 import { auth } from "@/lib/api"
 import toast from "react-hot-toast"
 import { Loader2, Eye, EyeOff } from "lucide-react"
+
+declare global {
+  interface Window {
+    google?: any;
+    googleSignIn?: (response: any) => void;
+  }
+}
 
 export default function LoginPage() {
   const { settings } = useBranding()
@@ -13,9 +20,51 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [focused, setFocused] = useState("")
+  const [googleClientId, setGoogleClientId] = useState("")
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const authBranding = settings?.auth as Record<string, string> | undefined
   const panelName = settings?.branding?.panelName || settings?.branding?.shortName || "Minevo"
+
+  useEffect(() => {
+    const gSettings = settings?.google as Record<string, string> | undefined
+    const clientId = gSettings?.clientId
+    if (clientId) {
+      setGoogleClientId(clientId)
+      const script = document.createElement("script")
+      script.src = "https://accounts.google.com/gsi/client"
+      script.async = true
+      script.defer = true
+      document.head.appendChild(script)
+      window.googleSignIn = async (response: any) => {
+        setGoogleLoading(true)
+        try {
+          const payload = JSON.parse(atob(response.credential.split(".")[1]))
+          const res = await fetch("/api/auth/google", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              idToken: response.credential,
+              email: payload.email,
+              name: payload.name,
+              avatar: payload.picture,
+              googleId: payload.sub,
+            }),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error)
+          localStorage.setItem("token", data.token)
+          localStorage.setItem("user", JSON.stringify(data.user))
+          toast.success("Welcome!")
+          window.location.href = "/dashboard"
+        } catch (e: any) {
+          toast.error(e.message || "Google sign-in failed")
+        } finally {
+          setGoogleLoading(false)
+        }
+      }
+    }
+  }, [settings])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,6 +165,38 @@ export default function LoginPage() {
             {loading ? "Signing in..." : authBranding?.loginButtonText || "Sign In"}
           </button>
         </form>
+
+        {googleClientId && (
+          <>
+            <div className="flex items-center gap-3 my-5">
+              <div className="flex-1 h-px" style={{ backgroundColor: "var(--brand-border)" }} />
+              <span className="text-[11px]" style={{ color: "var(--brand-muted)" }}>or</span>
+              <div className="flex-1 h-px" style={{ backgroundColor: "var(--brand-border)" }} />
+            </div>
+            <div
+              id="g_id_onload"
+              data-client_id={googleClientId}
+              data-callback="googleSignIn"
+              data-auto_prompt="false"
+            />
+            <div
+              className="g_id_signin"
+              data-type="standard"
+              data-size="large"
+              data-theme="outline"
+              data-text="sign_in_with"
+              data-shape="rectangular"
+              data-logo_alignment="left"
+              style={{ width: "100%" }}
+            />
+            {googleLoading && (
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <Loader2 className="w-4 h-4 animate-spin" style={{ color: "var(--brand-muted)" }} />
+                <span className="text-[11px]" style={{ color: "var(--brand-muted)" }}>Signing in with Google...</span>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Footer */}
         <p className="text-center text-[12px] mt-6" style={{ color: "var(--brand-muted)" }}>

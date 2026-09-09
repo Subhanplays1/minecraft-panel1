@@ -318,6 +318,7 @@ export interface PublicSettings {
   features: Record<string, boolean>;
   footer: { copyright: string; sections: unknown; isVisible: boolean } | null;
   languages: Array<{ code: string; name: string; nativeName: string }>;
+  google: Record<string, string>;
 }
 
 export interface BrandingSettings {

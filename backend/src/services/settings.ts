@@ -257,6 +257,7 @@ export class SettingsService {
       features: Object.fromEntries(features.map((f) => [f.key, f.isEnabled])),
       footer,
       languages,
+      google: await this.getGroup("google"),
     };
   }
 

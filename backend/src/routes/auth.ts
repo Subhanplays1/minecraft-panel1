@@ -2,9 +2,11 @@ import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as OTPAuth from "otpauth";
+import crypto from "crypto";
 import { prisma } from "../utils/prisma";
 import { authenticate, generateToken } from "../middleware/auth";
 import { validate, loginSchema, registerSchema } from "../middleware/validation";
+import nodemailer from "nodemailer";
 
 const router = Router();
 
@@ -217,6 +219,8 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
         discordAvatar: true,
         discordVerified: true,
         discordVerifiedAt: true,
+        googleId: true,
+        googleAvatar: true,
       },
     });
 
@@ -297,6 +301,151 @@ router.put("/password", authenticate, async (req: Request, res: Response) => {
     return res.json({ message: "Password updated" });
   } catch (error) {
     console.error("Update password error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// EMAIL VERIFICATION
+// ============================================================
+
+async function sendVerificationEmail(email: string, token: string) {
+  const smtpHost = await prisma.setting.findFirst({ where: { group: "smtp", key: "host" } });
+  const smtpPort = await prisma.setting.findFirst({ where: { group: "smtp", key: "port" } });
+  const smtpUser = await prisma.setting.findFirst({ where: { group: "smtp", key: "user" } });
+  const smtpPass = await prisma.setting.findFirst({ where: { group: "smtp", key: "pass" } });
+  const smtpFrom = await prisma.setting.findFirst({ where: { group: "smtp", key: "from" } });
+  const panelUrl = await prisma.setting.findFirst({ where: { group: "branding", key: "siteUrl" } });
+
+  if (!smtpHost?.value || !smtpUser?.value || !smtpPass?.value) {
+    console.log(`[Email] Verification token for ${email}: ${token}`);
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost.value,
+    port: parseInt(smtpPort?.value || "587"),
+    secure: parseInt(smtpPort?.value || "587") === 465,
+    auth: { user: smtpUser.value, pass: smtpPass.value },
+  });
+
+  const url = panelUrl?.value || "http://localhost:3000";
+
+  await transporter.sendMail({
+    from: smtpFrom?.value || smtpUser.value,
+    to: email,
+    subject: "Verify your email - Minevo",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+        <h2 style="color: #111;">Verify your email</h2>
+        <p style="color: #666; font-size: 14px;">Click the link below to verify your email address:</p>
+        <a href="${url}/verify-email?token=${token}" style="display: inline-block; padding: 12px 24px; background: #111; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px; margin: 16px 0;">Verify Email</a>
+        <p style="color: #999; font-size: 12px;">Or copy this link: ${url}/verify-email?token=${token}</p>
+        <p style="color: #999; font-size: 12px;">This link expires in 24 hours.</p>
+      </div>
+    `,
+  });
+}
+
+// POST /api/auth/verify-email/send
+router.post("/verify-email/send", authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (user.emailVerified) return res.status(400).json({ error: "Email already verified" });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { verificationCode: token, verificationCodeExpires: expires },
+    });
+
+    await sendVerificationEmail(user.email, token);
+    return res.json({ message: "Verification email sent" });
+  } catch (error) {
+    console.error("Send verification error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/auth/verify-email
+router.post("/verify-email", async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: "Token required" });
+
+    const user = await prisma.user.findFirst({
+      where: { verificationCode: token, verificationCodeExpires: { gt: new Date() } },
+    });
+    if (!user) return res.status(400).json({ error: "Invalid or expired token" });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerified: true, verificationCode: null, verificationCodeExpires: null },
+    });
+
+    return res.json({ message: "Email verified" });
+  } catch (error) {
+    console.error("Verify email error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ============================================================
+// GOOGLE OAUTH
+// ============================================================
+
+// POST /api/auth/google
+router.post("/google", async (req: Request, res: Response) => {
+  try {
+    const { idToken, email, name, avatar, googleId } = req.body;
+    if (!email || !googleId) return res.status(400).json({ error: "Invalid Google auth data" });
+
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ googleId }, { email }] },
+    });
+
+    if (user) {
+      // Update Google fields
+      if (!user.googleId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId, googleAvatar: avatar, emailVerified: true },
+        });
+      }
+    } else {
+      // Create new user
+      user = await prisma.user.create({
+        data: {
+          email,
+          name: name || email.split("@")[0],
+          avatar: avatar || null,
+          googleId,
+          googleAvatar: avatar,
+          emailVerified: true,
+          password: null,
+        },
+      });
+    }
+
+    if (user.banned) return res.status(403).json({ error: "Account is banned" });
+
+    const token = generateToken(user);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), loginCount: { increment: 1 } },
+    });
+
+    return res.json({
+      token,
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, avatar: user.avatar },
+    });
+  } catch (error) {
+    console.error("Google auth error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

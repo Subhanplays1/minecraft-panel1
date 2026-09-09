@@ -46,13 +46,21 @@ export default function ProfilePage() {
   const [twoFAAction, setTwoFAAction] = useState<"setup" | "disable">("setup")
   const [saving2FA, setSaving2FA] = useState(false)
   const [twoFAMsg, setTwoFAMsg] = useState("")
+  const [emailVerified, setEmailVerified] = useState(false)
+  const [sendingVerify, setSendingVerify] = useState(false)
+  const [verifyMsg, setVerifyMsg] = useState("")
+  const [googleLinked, setGoogleLinked] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem("token")
     fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((d) => {
-        if (d.user) { setUser(d.user); setName(d.user.name); setEmail(d.user.email); }
+        if (d.user) {
+          setUser(d.user); setName(d.user.name); setEmail(d.user.email)
+          setEmailVerified(d.user.emailVerified || false)
+          setGoogleLinked(!!d.user.googleId)
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -142,6 +150,45 @@ export default function ProfilePage() {
       <div className="mb-5">
         <h1 className="text-[17px] font-semibold" style={{ color: "var(--brand-text)" }}>Profile</h1>
         <p className="text-[12px] mt-0.5" style={{ color: "var(--brand-muted)" }}>Manage your account settings</p>
+      </div>
+
+      {/* Email Verification Card */}
+      <div className="rounded-xl mb-4 overflow-hidden" style={{ backgroundColor: "var(--brand-card)", border: "1px solid var(--brand-border)" }}>
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--brand-border)" }}>
+          <Mail size={14} strokeWidth={1.5} style={{ color: "var(--brand-muted)" }} />
+          <h2 className="text-[13px] font-medium" style={{ color: "var(--brand-text)" }}>Email</h2>
+          {emailVerified && (
+            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: "rgba(34,197,94,0.15)", color: "#22C55E" }}>Verified</span>
+          )}
+        </div>
+        <div className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[12px]" style={{ color: "var(--brand-text)" }}>{user?.email}</div>
+              <div className="text-[11px] mt-0.5" style={{ color: emailVerified ? "#22C55E" : "var(--brand-muted)" }}>
+                {emailVerified ? "Email verified" : "Email not verified"}
+              </div>
+            </div>
+            {!emailVerified && (
+              <button
+                onClick={async () => {
+                  setSendingVerify(true); setVerifyMsg("")
+                  const token = localStorage.getItem("token")
+                  const r = await fetch("/api/auth/verify-email/send", { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+                  setVerifyMsg(r.ok ? "Verification email sent" : "Failed to send")
+                  setSendingVerify(false)
+                }}
+                disabled={sendingVerify}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5"
+                style={{ backgroundColor: "var(--brand-background)", color: "var(--brand-text)", border: "1px solid var(--brand-border)" }}
+              >
+                {sendingVerify ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                Send Verification
+              </button>
+            )}
+          </div>
+          {verifyMsg && <div className="text-[11px] mt-2" style={{ color: "var(--brand-muted)" }}>{verifyMsg}</div>}
+        </div>
       </div>
 
       {/* Discord Verification Card */}
